@@ -1,0 +1,26 @@
+{
+  "name": "festival-india",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "dev:web": "turbo dev --filter=@festival-india/web",
+    "dev:api": "turbo dev --filter=@festival-india/api",
+    "seed": "tsx scripts/seed-festivals.ts",
+    "scrape": "tsx scripts/scrape-calendarific.ts"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "npm@10.0.0"
+}

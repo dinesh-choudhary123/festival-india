@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sidebar-width: 260px;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+/* Badge animations */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors;
+}
+
+.badge-festival {
+  @apply bg-orange-100 text-orange-800;
+}
+
+.badge-social {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.badge-observance {
+  @apply bg-purple-100 text-purple-800;
+}
+
+.badge-global {
+  @apply bg-green-100 text-green-800;
+}
+
+.badge-national {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.badge-regional {
+  @apply bg-orange-100 text-orange-800;
+}
+
+/* Table row hover */
+.festival-row {
+  @apply transition-colors duration-150;
+}
+
+.festival-row:hover {
+  @apply bg-gray-50;
+}
+
+/* Dropdown styles */
+.filter-select {
+  @apply appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm text-gray-700
+         focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-brand-orange cursor-pointer;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+  @apply bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Toast notification */
+.toast {
+  @apply fixed bottom-4 right-4 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg z-50;
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Countdown timer */
+.countdown-card {
+  @apply bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center;
+}
+
+.countdown-number {
+  @apply text-3xl font-bold text-brand-orange;
+}
