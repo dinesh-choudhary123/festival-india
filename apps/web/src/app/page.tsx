@@ -1,21 +1,43 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Header } from "@/components/layout/Header";
 import { FilterBar } from "@/components/festivals/FilterBar";
 import { FestivalTable } from "@/components/festivals/FestivalTable";
+import { MyCalendarTable } from "@/components/festivals/MyCalendarTable";
 import { FestivalDetailModal } from "@/components/festivals/FestivalDetailModal";
 import { PostCreator } from "@/components/festivals/PostCreator";
 import { Pagination } from "@/components/festivals/Pagination";
 import { UpcomingCountdown } from "@/components/festivals/UpcomingCountdown";
 import { useFestivals } from "@/hooks/useFestivals";
-import type { Festival } from "@/lib/types";
+import type { Festival, CalendarEntry } from "@/lib/types";
 
 type Tab = "available" | "calendar";
+
+const STORAGE_KEY = "festival-india-calendar";
+
+function loadCalendarData(): Record<string, CalendarEntry> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCalendarData(data: Record<string, CalendarEntry>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // storage full or unavailable
+  }
+}
 
 export default function HomePage() {
   const {
     festivals,
+    allFilteredFestivals,
     total,
     page,
     apiConnected,
@@ -30,8 +52,13 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<Tab>("available");
   const [selectedFestival, setSelectedFestival] = useState<Festival | null>(null);
   const [postFestival, setPostFestival] = useState<Festival | null>(null);
-  const [calendarItems, setCalendarItems] = useState<Set<string>>(new Set());
+  const [calendarData, setCalendarData] = useState<Record<string, CalendarEntry>>({});
   const [toast, setToast] = useState<string | null>(null);
+
+  // Load calendar data from localStorage on mount
+  useEffect(() => {
+    setCalendarData(loadCalendarData());
+  }, []);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -40,22 +67,71 @@ export default function HomePage() {
 
   const handleAddToCalendar = useCallback(
     (festival: Festival) => {
-      setCalendarItems((prev) => {
-        const next = new Set(prev);
-        if (next.has(festival.id)) {
-          next.delete(festival.id);
+      setCalendarData((prev) => {
+        const next = { ...prev };
+        if (next[festival.id]) {
+          delete next[festival.id];
           showToast(`Removed "${festival.name}" from calendar`);
         } else {
-          next.add(festival.id);
+          next[festival.id] = {
+            id: festival.id,
+            festival_id: festival.id,
+            name: festival.name,
+            date: festival.date,
+            day: festival.day,
+            type: festival.type,
+            scope: festival.scope,
+            category: festival.category,
+            description: festival.description,
+            notes: null,
+            added_at: new Date().toISOString(),
+            ownership: "",
+            creative_budget: 500,
+            media_budget: 1000,
+          };
           showToast(`Added "${festival.name}" to calendar`);
         }
+        saveCalendarData(next);
         return next;
       });
     },
     [showToast]
   );
 
-  const calendarCount = calendarItems.size;
+  const handleRemoveFromCalendar = useCallback(
+    (festivalId: string) => {
+      setCalendarData((prev) => {
+        const next = { ...prev };
+        const name = next[festivalId]?.name || "Festival";
+        delete next[festivalId];
+        saveCalendarData(next);
+        showToast(`Removed "${name}" from calendar`);
+        return next;
+      });
+    },
+    [showToast]
+  );
+
+  const handleUpdateEntry = useCallback(
+    (festivalId: string, updates: Partial<CalendarEntry>) => {
+      setCalendarData((prev) => {
+        const next = { ...prev };
+        if (next[festivalId]) {
+          next[festivalId] = { ...next[festivalId], ...updates };
+          saveCalendarData(next);
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const calendarCount = Object.keys(calendarData).length;
+
+  // Get festival objects for calendar entries
+  const calendarFestivals = useMemo(() => {
+    return allFilteredFestivals.filter((f) => calendarData[f.id]);
+  }, [allFilteredFestivals, calendarData]);
 
   return (
     <div className="flex flex-col h-full">
@@ -103,8 +179,10 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <FilterBar filters={filters} onFilterChange={updateFilters} />
+      {/* Filters — only show on Available Days tab */}
+      {activeTab === "available" && (
+        <FilterBar filters={filters} onFilterChange={updateFilters} />
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-auto bg-gray-50">
@@ -127,23 +205,14 @@ export default function HomePage() {
                 />
               </>
             ) : (
-              <>
-                {calendarCount === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-                    <p className="text-lg font-medium">Your calendar is empty</p>
-                    <p className="text-sm mt-1">
-                      Click &quot;+ Add to Calendar&quot; on any festival to add it here
-                    </p>
-                  </div>
-                ) : (
-                  <FestivalTable
-                    festivals={festivals.filter((f) => calendarItems.has(f.id))}
-                    onViewDetails={setSelectedFestival}
-                    onAddToCalendar={handleAddToCalendar}
-                    onMakePost={setPostFestival}
-                  />
-                )}
-              </>
+              <MyCalendarTable
+                festivals={calendarFestivals}
+                calendarData={calendarData}
+                onViewDetails={setSelectedFestival}
+                onRemoveFromCalendar={handleRemoveFromCalendar}
+                onUpdateEntry={handleUpdateEntry}
+                onMakePost={setPostFestival}
+              />
             )}
           </div>
 

@@ -50,4 +50,7 @@ export interface CalendarEntry {
   description: string;
   notes: string | null;
   added_at: string;
+  ownership: string;
+  creative_budget: number;
+  media_budget: number;
 }
