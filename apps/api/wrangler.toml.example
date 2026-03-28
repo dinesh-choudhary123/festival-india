@@ -1,0 +1,40 @@
+name = "festival-india-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "development"
+CALENDARIFIC_API_KEY = "your_calendarific_api_key_here"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "festival-india-db"
+database_id = "your_d1_database_id_here"
+
+# R2 Bucket for images/assets
+[[r2_buckets]]
+binding = "ASSETS"
+bucket_name = "festival-india-assets"
+
+# Durable Objects for real-time
+[durable_objects]
+bindings = [
+  { name = "CALENDAR_ROOM", class_name = "CalendarRoom" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["CalendarRoom"]
+
+# Cron trigger — runs Jan 1st every year to scrape next 5 years
+[triggers]
+crons = ["0 0 1 1 *"]
+
+# Environment-specific config
+[env.production]
+vars = { ENVIRONMENT = "production" }
+
+[env.staging]
+vars = { ENVIRONMENT = "staging" }
