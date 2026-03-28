@@ -75,16 +75,20 @@ export function FestivalTable({
                     {festival.name}
                   </span>
                   {festival.description && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onViewDetails(festival);
-                      }}
-                      className="text-blue-400 hover:text-blue-600 transition-colors"
-                      title="View details"
-                    >
-                      <Info size={14} />
-                    </button>
+                    <span className="relative group">
+                      <span className="text-blue-400 hover:text-blue-600 transition-colors cursor-help">
+                        <Info size={14} />
+                      </span>
+                      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-72 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg
+                                     opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                        <span className="block font-semibold mb-1">{festival.name}</span>
+                        <span className="block text-gray-300 leading-relaxed">{festival.description}</span>
+                        {festival.where_celebrated && (
+                          <span className="block text-gray-400 mt-1">📍 {festival.where_celebrated}</span>
+                        )}
+                        <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-900" />
+                      </span>
+                    </span>
                   )}
                 </div>
               </td>

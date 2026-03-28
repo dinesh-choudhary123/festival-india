@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import type { Festival, FestivalFilters } from "@/lib/types";
 import { SEED_FESTIVALS } from "@/lib/seed-data";
 
@@ -22,33 +22,29 @@ export function useFestivals() {
   const [apiConnected, setApiConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const pageSize = 50;
+  const abortRef = useRef<AbortController | null>(null);
 
   const updateFilters = useCallback((partial: Partial<FestivalFilters>) => {
     setFilters((prev) => ({ ...prev, ...partial }));
     setPage(1);
   }, []);
 
-  // Try to fetch from live API on mount and when year changes
+  // Fetch ALL festivals for the selected year from API (filter client-side for reliability)
   useEffect(() => {
-    let cancelled = false;
+    // Abort previous request
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     async function fetchFromAPI() {
       try {
         setLoading(true);
-        const params: Record<string, string | number> = {
-          year: filters.year,
-          limit: 500,
-          page: 1,
-        };
-        if (filters.month > 0) params.month = filters.month;
-        if (filters.category !== "All Categories") params.category = filters.category;
-        if (filters.type !== "All Types") params.type = filters.type;
-        if (filters.scope !== "All Scopes") params.scope = filters.scope;
-        if (filters.search) params.search = filters.search;
 
-        const input = encodeURIComponent(JSON.stringify({ json: params }));
+        // Only send year + high limit — filter client-side for reliability
+        const params = { year: filters.year, limit: 500, page: 1 };
+        const input = encodeURIComponent(JSON.stringify(params));
         const res = await fetch(`${API_URL}/trpc/festivals.list?input=${input}`, {
-          signal: AbortSignal.timeout(5000),
+          signal: controller.signal,
         });
 
         if (!res.ok) throw new Error("API error");
@@ -56,41 +52,38 @@ export function useFestivals() {
         const data = await res.json();
         const festivals = data?.result?.data?.festivals;
 
-        if (!cancelled && festivals && festivals.length > 0) {
-          setApiFestivals(festivals);
-          setApiConnected(true);
+        if (!controller.signal.aborted) {
+          if (Array.isArray(festivals)) {
+            setApiFestivals(festivals);
+            setApiConnected(true);
+          } else {
+            throw new Error("Invalid response");
+          }
         }
-      } catch {
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") return;
         // API not available — fall back to seed data
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setApiFestivals(null);
           setApiConnected(false);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
     fetchFromAPI();
-    return () => { cancelled = true; };
-  }, [filters.year, filters.month, filters.category, filters.type, filters.scope, filters.search]);
+    return () => controller.abort();
+  }, [filters.year]);
 
-  // Use API data if available, otherwise seed data
-  const allFestivals = useMemo(() => {
-    if (apiConnected && apiFestivals) {
-      return apiFestivals;
-    }
-    // Fallback: filter seed data locally
-    return SEED_FESTIVALS.filter((f) => f.year === filters.year);
-  }, [apiConnected, apiFestivals, filters.year]);
-
+  // Always filter client-side for reliability (API provides year data, we filter the rest)
   const filtered = useMemo(() => {
-    let result = allFestivals;
+    const source = apiConnected && apiFestivals !== null
+      ? apiFestivals
+      : SEED_FESTIVALS.filter((f) => f.year === filters.year);
 
-    // If API is connected, filtering is done server-side already
-    if (apiConnected) return result;
+    let result = [...source];
 
-    // Client-side filtering for seed data fallback
     if (filters.month > 0) {
       result = result.filter((f) => parseInt(f.date.split("-")[1], 10) === filters.month);
     }
@@ -106,12 +99,12 @@ export function useFestivals() {
     if (filters.search.trim()) {
       const q = filters.search.toLowerCase();
       result = result.filter(
-        (f) => f.name.toLowerCase().includes(q) || f.description.toLowerCase().includes(q)
+        (f) => f.name.toLowerCase().includes(q) || (f.description && f.description.toLowerCase().includes(q))
       );
     }
 
     return result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [allFestivals, filters, apiConnected]);
+  }, [apiConnected, apiFestivals, filters]);
 
   const paginated = useMemo(() => {
     const start = (page - 1) * pageSize;
