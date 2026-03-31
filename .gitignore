@@ -13,3 +13,4 @@ coverage/
 
 # Wrangler config contains secrets — use wrangler.toml.example as template
 apps/api/wrangler.toml
+.claude/
