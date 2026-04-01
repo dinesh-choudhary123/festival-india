@@ -65,45 +65,51 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
     setFetchError("");
 
     try {
-      // Call our server-side API route to avoid CORS restrictions
       const res = await fetch(`/api/fetch-metrics?url=${encodeURIComponent(url.trim())}`);
       if (!res.ok) throw new Error("API error");
       const data = await res.json() as {
-        metrics?: { views?: number; likes?: number; comments?: number };
+        metrics?: { views?: number; likes?: number; comments?: number; shares?: number };
         note?: string;
         error?: string;
         title?: string;
       };
 
       if (data.error) {
-        setFetchError(data.error);
+        setFetchError("⚠️ " + data.error + " — please enter metrics manually.");
         return;
       }
 
       // Auto-fill whatever metrics were returned
-      let filled = 0;
-      if (data.metrics?.views !== undefined) {
+      const fields: string[] = [];
+      if (data.metrics?.views !== undefined && data.metrics.views > 0) {
         setViews(String(data.metrics.views));
-        filled++;
+        fields.push("views");
       }
-      if (data.metrics?.likes !== undefined) {
+      if (data.metrics?.likes !== undefined && data.metrics.likes > 0) {
         setLikes(String(data.metrics.likes));
-        filled++;
+        fields.push("likes");
       }
-      if (data.metrics?.comments !== undefined) {
+      if (data.metrics?.comments !== undefined && data.metrics.comments > 0) {
         setComments(String(data.metrics.comments));
-        filled++;
+        fields.push("comments");
+      }
+      if (data.metrics?.shares !== undefined && data.metrics.shares > 0) {
+        setShares(String(data.metrics.shares));
+        fields.push("shares");
       }
 
-      if (filled > 0) {
-        setFetchError(`✅ Fetched ${filled} metric${filled > 1 ? "s" : ""} successfully! Review and add more if needed.`);
+      if (fields.length > 0) {
+        const missing = ["views", "likes", "comments", "shares"].filter((f) => !fields.includes(f));
+        setFetchError(
+          `✅ Auto-filled: ${fields.join(", ")}.${missing.length ? ` Please enter ${missing.join(", ")} manually.` : ""}`
+        );
       } else if (data.note) {
-        setFetchError(data.note);
+        setFetchError("ℹ️ " + data.note);
       } else {
-        setFetchError("No public metrics found. Please enter manually.");
+        setFetchError("ℹ️ Could not auto-fetch metrics for this platform. Please enter all values manually.");
       }
     } catch {
-      setFetchError("Could not fetch metrics. Please enter manually.");
+      setFetchError("⚠️ Network error. Please enter metrics manually.");
     } finally {
       setFetching(false);
     }
@@ -270,7 +276,11 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
             )}
 
             {fetchError && (
-              <p className={`text-xs ${fetchError.startsWith("✅") ? "text-green-600" : "text-amber-600"}`}>
+              <p className={`text-xs leading-relaxed ${
+                fetchError.startsWith("✅") ? "text-green-600" :
+                fetchError.startsWith("ℹ️") ? "text-blue-600" :
+                "text-amber-600"
+              }`}>
                 {fetchError}
               </p>
             )}

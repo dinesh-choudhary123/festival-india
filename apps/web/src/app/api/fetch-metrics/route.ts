@@ -15,13 +15,26 @@ function extractYoutubeId(url: string): string | null {
     /[?&]v=([a-zA-Z0-9_-]{11})/,
     /shorts\/([a-zA-Z0-9_-]{11})/,
     /embed\/([a-zA-Z0-9_-]{11})/,
-    /watch\/([a-zA-Z0-9_-]{11})/,
   ];
   for (const p of patterns) {
     const m = url.match(p);
     if (m) return m[1];
   }
   return null;
+}
+
+/** Parse shorthand like "1.2M" → 1200000 */
+function parseShortNumber(s: string): number | undefined {
+  if (!s) return undefined;
+  const clean = s.replace(/,/g, "").trim();
+  const match = clean.match(/^([\d.]+)([KMBkmb]?)$/);
+  if (!match) return undefined;
+  const n = parseFloat(match[1]);
+  const suffix = match[2].toUpperCase();
+  if (suffix === "K") return Math.round(n * 1_000);
+  if (suffix === "M") return Math.round(n * 1_000_000);
+  if (suffix === "B") return Math.round(n * 1_000_000_000);
+  return Math.round(n);
 }
 
 async function fetchYoutubeMetrics(url: string) {
@@ -33,61 +46,89 @@ async function fetchYoutubeMetrics(url: string) {
     const res = await fetch(watchUrl, {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
         Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
       },
-      next: { revalidate: 300 }, // cache for 5 minutes
     });
 
-    if (!res.ok) return { error: "Could not fetch YouTube page" };
+    if (!res.ok) return { error: `YouTube returned ${res.status}` };
     const html = await res.text();
 
-    // Extract view count — YouTube embeds this in multiple JSON structures
     let views: number | undefined;
     let likes: number | undefined;
     let comments: number | undefined;
     let title: string | undefined;
 
-    // Pattern 1: viewCount in videoViewCountRenderer
-    const viewMatch1 = html.match(
-      /"viewCount":\{"videoViewCountRenderer":\{"viewCount":\{"simpleText":"([\d,]+)/
-    );
-    if (viewMatch1) views = parseInt(viewMatch1[1].replace(/,/g, ""), 10);
+    // ── VIEWS ─────────────────────────────────────────────────────────
+    // Pattern 1: full number in viewCount
+    const v1 = html.match(/"viewCount":"(\d+)"/);
+    if (v1) views = parseInt(v1[1], 10);
 
-    // Pattern 2: viewCount as plain number in ytInitialData
+    // Pattern 2: videoViewCountRenderer
     if (!views) {
-      const viewMatch2 = html.match(/"viewCount":"(\d+)"/);
-      if (viewMatch2) views = parseInt(viewMatch2[1], 10);
+      const v2 = html.match(/"videoViewCountRenderer":\{"viewCount":\{"simpleText":"([\d,]+)/);
+      if (v2) views = parseInt(v2[1].replace(/,/g, ""), 10);
     }
 
-    // Pattern 3: interactionCount (schema.org)
+    // Pattern 3: interactionCount in schema.org JSON-LD
     if (!views) {
-      const viewMatch3 = html.match(/"interactionCount":"(\d+)"/);
-      if (viewMatch3) views = parseInt(viewMatch3[1], 10);
+      const v3 = html.match(/"interactionCount"\s*:\s*"(\d+)"/);
+      if (v3) views = parseInt(v3[1], 10);
     }
 
-    // Like count — YouTube hid exact counts in 2021 but still embeds in some formats
-    const likeMatch1 = html.match(/"label":"([\d,]+) likes"/);
-    if (likeMatch1) likes = parseInt(likeMatch1[1].replace(/,/g, ""), 10);
+    // ── LIKES ─────────────────────────────────────────────────────────
+    // Pattern 1: "label":"123,456 likes" (accessibility text)
+    const l1 = html.match(/"label"\s*:\s*"([\d,]+)\s+likes"/i);
+    if (l1) likes = parseInt(l1[1].replace(/,/g, ""), 10);
 
+    // Pattern 2: "label":"1.2M likes" (shorthand)
     if (!likes) {
-      const likeMatch2 = html.match(/"defaultText":\{"accessibility":\{"accessibilityData":\{"label":"([\d,]+) likes"/);
-      if (likeMatch2) likes = parseInt(likeMatch2[1].replace(/,/g, ""), 10);
+      const l2 = html.match(/"label"\s*:\s*"([\d.,]+[KMBkmb]?)\s+likes"/i);
+      if (l2) likes = parseShortNumber(l2[1]);
     }
 
-    // Comment count
-    const commentMatch = html.match(/"commentCount":"(\d+)"/);
-    if (commentMatch) comments = parseInt(commentMatch[1], 10);
+    // Pattern 3: toggledText / likeButton accessibility
+    if (!likes) {
+      const l3 = html.match(/"toggledText".*?"label"\s*:\s*"([\d,]+)\s+likes"/);
+      if (l3) likes = parseInt(l3[1].replace(/,/g, ""), 10);
+    }
 
-    // Title
-    const titleMatch = html.match(/"title":\{"runs":\[\{"text":"([^"]+)"/);
-    if (titleMatch) title = titleMatch[1];
+    // Pattern 4: defaultText accessibility for like button
+    if (!likes) {
+      const l4 = html.match(/"defaultText":\{"accessibility":\{"accessibilityData":\{"label":"([\d,]+)\s+likes"/);
+      if (l4) likes = parseInt(l4[1].replace(/,/g, ""), 10);
+    }
 
+    // Pattern 5: likeCount plain field
+    if (!likes) {
+      const l5 = html.match(/"likeCount"\s*:\s*"?(\d+)"?/);
+      if (l5) likes = parseInt(l5[1], 10);
+    }
+
+    // ── COMMENTS ──────────────────────────────────────────────────────
+    // Pattern 1: commentCount
+    const c1 = html.match(/"commentCount"\s*:\s*"?(\d+)"?/);
+    if (c1) comments = parseInt(c1[1], 10);
+
+    // Pattern 2: commentsCount in header
+    if (!comments) {
+      const c2 = html.match(/"commentsCount"\s*:\s*"?(\d+)"?/);
+      if (c2) comments = parseInt(c2[1], 10);
+    }
+
+    // ── TITLE ─────────────────────────────────────────────────────────
+    const t1 = html.match(/"title":\{"runs":\[\{"text":"([^"]+)"/);
+    if (t1) title = t1[1];
     if (!title) {
-      const titleMatch2 = html.match(/<title>([^<]+)<\/title>/);
-      if (titleMatch2) title = titleMatch2[1].replace(" - YouTube", "").trim();
+      const t2 = html.match(/<title>([^<]+)<\/title>/);
+      if (t2) title = t2[1].replace(/ - YouTube$/, "").trim();
     }
 
     return {
@@ -101,41 +142,133 @@ async function fetchYoutubeMetrics(url: string) {
       },
     };
   } catch (err) {
-    return { error: "Failed to fetch YouTube data" };
+    return { error: String(err) };
   }
 }
 
-async function fetchInstagramMetrics(url: string) {
-  try {
-    // Instagram oEmbed — gives basic info (no engagement metrics due to API restrictions)
-    const oembedUrl = `https://api.instagram.com/oembed?url=${encodeURIComponent(url)}&omitscript=true`;
-    const res = await fetch(oembedUrl, {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      next: { revalidate: 300 },
-    });
+function extractInstagramShortcode(url: string): string | null {
+  const m = url.match(/instagram\.com\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
+  return m ? m[1] : null;
+}
 
-    if (res.ok) {
-      const data = await res.json() as { author_name?: string; title?: string };
-      return {
-        platform: "instagram",
-        title: data.title || "",
-        author: data.author_name || "",
-        metrics: {},
-        note: "Instagram does not expose public engagement metrics via API. Please enter likes/comments/views manually from the post.",
-      };
-    }
-    return {
-      platform: "instagram",
-      metrics: {},
-      note: "Could not fetch Instagram data. Please enter metrics manually.",
-    };
-  } catch {
-    return {
-      platform: "instagram",
-      metrics: {},
-      note: "Could not fetch Instagram data. Please enter metrics manually.",
-    };
+async function fetchInstagramMetrics(url: string) {
+  const shortcode = extractInstagramShortcode(url);
+
+  const headers = {
+    "User-Agent":
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Cache-Control": "no-cache",
+    Pragma: "no-cache",
+    Referer: "https://www.instagram.com/",
+  };
+
+  // ── Attempt 1: Fetch main post page — parse JSON-LD and window.__additionalDataLoaded ──
+  if (shortcode) {
+    try {
+      const postUrl = `https://www.instagram.com/p/${shortcode}/`;
+      const res = await fetch(postUrl, { headers });
+      if (res.ok) {
+        const html = await res.text();
+
+        let likes: number | undefined;
+        let views: number | undefined;
+        let comments: number | undefined;
+
+        // JSON-LD structured data (most reliable)
+        const jsonLdMatches = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+        for (const match of jsonLdMatches) {
+          try {
+            const ld = JSON.parse(match[1]) as Record<string, unknown>;
+            const stats = (ld.interactionStatistic as Array<Record<string, unknown>>) || [];
+            for (const stat of stats) {
+              const type = String(stat.interactionType || "");
+              const count = parseInt(String(stat.userInteractionCount || "0"), 10);
+              if (!isNaN(count) && count > 0) {
+                if (type.includes("LikeAction")) likes = count;
+                else if (type.includes("CommentAction")) comments = count;
+                else if (type.includes("WatchAction")) views = count;
+              }
+            }
+          } catch {/* ignore */}
+        }
+
+        // window._sharedData (older Instagram pages)
+        const sharedMatch = html.match(/window\._sharedData\s*=\s*(\{.*?\});\s*<\/script>/);
+        if (sharedMatch) {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const sd = JSON.parse(sharedMatch[1]) as any;
+            const media = sd?.entry_data?.PostPage?.[0]?.graphql?.shortcode_media;
+            if (media) {
+              if (!likes) likes = media.edge_media_preview_like?.count;
+              if (!comments) comments = media.edge_media_to_parent_comment?.count;
+              if (!views) views = media.video_view_count;
+            }
+          } catch {/* ignore */}
+        }
+
+        // Only return if we got real numbers (> 0 indicates actual data, not defaults)
+        if (likes || views || comments) {
+          return {
+            platform: "instagram",
+            shortcode,
+            metrics: { likes, views, comments },
+          };
+        }
+      }
+    } catch {/* continue to next attempt */}
   }
+
+  // ── Attempt 2: Embed page + JSON-LD (no loose regex to avoid false positives) ──
+  if (shortcode) {
+    try {
+      const embedUrl = `https://www.instagram.com/p/${shortcode}/embed/captioned/`;
+      const res = await fetch(embedUrl, { headers });
+      if (res.ok) {
+        const html = await res.text();
+
+        let likes: number | undefined;
+        let views: number | undefined;
+        let comments: number | undefined;
+
+        // JSON-LD only — don't use loose number regex on embed HTML (too many false positives)
+        const jsonLdMatches = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+        for (const match of jsonLdMatches) {
+          try {
+            const ld = JSON.parse(match[1]) as Record<string, unknown>;
+            const stats = (ld.interactionStatistic as Array<Record<string, unknown>>) || [];
+            for (const stat of stats) {
+              const type = String(stat.interactionType || "");
+              const count = parseInt(String(stat.userInteractionCount || "0"), 10);
+              if (!isNaN(count) && count > 0) {
+                if (type.includes("LikeAction")) likes = count;
+                else if (type.includes("CommentAction")) comments = count;
+                else if (type.includes("WatchAction")) views = count;
+              }
+            }
+          } catch {/* ignore */}
+        }
+
+        if (likes || views || comments) {
+          return {
+            platform: "instagram",
+            shortcode,
+            metrics: { likes, views, comments },
+          };
+        }
+      }
+    } catch {/* continue */}
+  }
+
+  // ── Fallback: Confirm URL is valid, ask for manual entry ──
+  return {
+    platform: "instagram",
+    shortcode,
+    metrics: {},
+    note: "Instagram blocks automated metric access. The post URL is valid — please enter likes, comments, and views manually from the post.",
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -157,13 +290,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(result);
     }
 
-    // Twitter, Facebook, others — cannot scrape due to auth walls
+    // Twitter / Facebook / others — auth walls block all scraping
     return NextResponse.json({
       platform,
       metrics: {},
-      note: `${platform.charAt(0).toUpperCase() + platform.slice(1)} does not allow public metric fetching. Please enter likes/comments/views manually.`,
+      note: `${platform.charAt(0).toUpperCase() + platform.slice(1)} requires authentication to fetch metrics. Please enter likes, comments, views, and shares manually.`,
     });
-  } catch {
-    return NextResponse.json({ error: "Unexpected error fetching metrics" }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
