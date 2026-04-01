@@ -26,6 +26,23 @@ export const MONTHS = [
   { value: 12, label: "December" },
 ];
 
+export const CURRENCIES = [
+  { code: "INR", symbol: "\u20B9", name: "Indian Rupee" },
+  { code: "USD", symbol: "$", name: "US Dollar" },
+  { code: "EUR", symbol: "\u20AC", name: "Euro" },
+  { code: "GBP", symbol: "\u00A3", name: "British Pound" },
+  { code: "JPY", symbol: "\u00A5", name: "Japanese Yen" },
+  { code: "AED", symbol: "AED", name: "UAE Dirham" },
+  { code: "SGD", symbol: "S$", name: "Singapore Dollar" },
+  { code: "AUD", symbol: "A$", name: "Australian Dollar" },
+] as const;
+
+export const DEFAULT_CURRENCY = "INR";
+
+export function getCurrencySymbol(code: string): string {
+  return CURRENCIES.find((c) => c.code === code)?.symbol || "\u20B9";
+}
+
 export function getYearRange(): number[] {
   const currentYear = new Date().getFullYear();
   return Array.from({ length: 5 }, (_, i) => currentYear + i);

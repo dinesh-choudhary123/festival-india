@@ -10,11 +10,13 @@ import { PostCreator } from "@/components/festivals/PostCreator";
 import { Pagination } from "@/components/festivals/Pagination";
 import { UpcomingCountdown } from "@/components/festivals/UpcomingCountdown";
 import { useFestivals } from "@/hooks/useFestivals";
+import { DEFAULT_CURRENCY } from "@/lib/constants";
 import type { Festival, CalendarEntry } from "@/lib/types";
 
 type Tab = "available" | "calendar";
 
 const STORAGE_KEY = "festival-india-calendar";
+const CURRENCY_KEY = "festival-india-currency";
 
 function loadCalendarData(): Record<string, CalendarEntry> {
   if (typeof window === "undefined") return {};
@@ -54,10 +56,18 @@ export default function HomePage() {
   const [postFestival, setPostFestival] = useState<Festival | null>(null);
   const [calendarData, setCalendarData] = useState<Record<string, CalendarEntry>>({});
   const [toast, setToast] = useState<string | null>(null);
+  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
 
-  // Load calendar data from localStorage on mount
+  // Load calendar data + currency from localStorage on mount
   useEffect(() => {
     setCalendarData(loadCalendarData());
+    const savedCurrency = typeof window !== "undefined" ? localStorage.getItem(CURRENCY_KEY) : null;
+    if (savedCurrency) setCurrency(savedCurrency);
+  }, []);
+
+  const handleCurrencyChange = useCallback((code: string) => {
+    setCurrency(code);
+    try { localStorage.setItem(CURRENCY_KEY, code); } catch {}
   }, []);
 
   const showToast = useCallback((message: string) => {
@@ -88,6 +98,7 @@ export default function HomePage() {
             ownership: "",
             creative_budget: 500,
             media_budget: 1000,
+            benchmarks: [],
           };
           showToast(`Added "${festival.name}" to calendar`);
         }
@@ -212,6 +223,8 @@ export default function HomePage() {
                 onRemoveFromCalendar={handleRemoveFromCalendar}
                 onUpdateEntry={handleUpdateEntry}
                 onMakePost={setPostFestival}
+                currency={currency}
+                onCurrencyChange={handleCurrencyChange}
               />
             )}
           </div>

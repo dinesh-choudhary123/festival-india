@@ -38,6 +38,18 @@ export interface FestivalFilters {
   search: string;
 }
 
+export interface BenchmarkEntry {
+  url: string;
+  platform: "instagram" | "twitter" | "facebook" | "youtube" | "other";
+  metrics: {
+    likes?: number;
+    comments?: number;
+    shares?: number;
+    views?: number;
+  };
+  added_at: string;
+}
+
 export interface CalendarEntry {
   id: string;
   festival_id: string;
@@ -53,4 +65,5 @@ export interface CalendarEntry {
   ownership: string;
   creative_budget: number;
   media_budget: number;
+  benchmarks: BenchmarkEntry[];
 }

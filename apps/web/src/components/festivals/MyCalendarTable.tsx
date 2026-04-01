@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Info, Calendar, MoreVertical, Image, Trash2, FileText } from "lucide-react";
-import { formatDate } from "@/lib/constants";
+import { Info, Calendar, MoreVertical, Image, Trash2, FileText, BarChart3 } from "lucide-react";
+import { formatDate, CURRENCIES, getCurrencySymbol } from "@/lib/constants";
 import { TypeBadge, ScopeBadge } from "./FestivalBadge";
-import type { Festival, CalendarEntry } from "@/lib/types";
+import { BenchmarkModal } from "./BenchmarkModal";
+import type { Festival, CalendarEntry, BenchmarkEntry } from "@/lib/types";
 
 interface MyCalendarTableProps {
   festivals: Festival[];
@@ -13,13 +14,22 @@ interface MyCalendarTableProps {
   onRemoveFromCalendar: (festivalId: string) => void;
   onUpdateEntry: (festivalId: string, updates: Partial<CalendarEntry>) => void;
   onMakePost: (festival: Festival) => void;
+  currency: string;
+  onCurrencyChange: (code: string) => void;
 }
 
 const SCOPE_TABS = ["All", "Global", "National", "Regional"] as const;
 
-function formatBudget(value: number): string {
-  if (value >= 1000) return `$${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}K`;
-  return `$${value}`;
+function formatBudget(value: number, symbol: string): string {
+  if (value >= 1000) return `${symbol}${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}K`;
+  return `${symbol}${value}`;
+}
+
+function formatMetricShort(n?: number): string {
+  if (n === undefined || n === null) return "";
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return String(n);
 }
 
 export function MyCalendarTable({
@@ -29,10 +39,15 @@ export function MyCalendarTable({
   onRemoveFromCalendar,
   onUpdateEntry,
   onMakePost,
+  currency,
+  onCurrencyChange,
 }: MyCalendarTableProps) {
   const [scopeFilter, setScopeFilter] = useState<string>("All");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [benchmarkFestivalId, setBenchmarkFestivalId] = useState<string | null>(null);
+
+  const currencySymbol = getCurrencySymbol(currency);
 
   const filtered = useMemo(() => {
     if (scopeFilter === "All") return festivals;
@@ -76,6 +91,10 @@ export function MyCalendarTable({
     });
   };
 
+  const benchmarkFestival = benchmarkFestivalId
+    ? festivals.find((f) => f.id === benchmarkFestivalId)
+    : null;
+
   if (festivals.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-gray-500">
@@ -90,8 +109,8 @@ export function MyCalendarTable({
 
   return (
     <div>
-      {/* Scope tabs + Budget totals */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200">
+      {/* Scope tabs + Currency + Budget totals */}
+      <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 flex-wrap gap-2">
         <div className="flex gap-6">
           {SCOPE_TABS.map((tab) => (
             <button
@@ -108,13 +127,24 @@ export function MyCalendarTable({
           ))}
         </div>
         <div className="flex items-center gap-3">
+          <select
+            value={currency}
+            onChange={(e) => onCurrencyChange(e.target.value)}
+            className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.symbol} {c.code}
+              </option>
+            ))}
+          </select>
           <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium border border-green-200">
             <span className="text-green-500">&#9786;</span>
-            Total Creative: {formatBudget(totals.creative)}
+            Total Creative: {formatBudget(totals.creative, currencySymbol)}
           </span>
           <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium border border-blue-200">
-            <span className="text-blue-500">$</span>
-            Total Media: {formatBudget(totals.media)}
+            <span className="text-blue-500">{currencySymbol}</span>
+            Total Media: {formatBudget(totals.media, currencySymbol)}
           </span>
         </div>
       </div>
@@ -164,6 +194,8 @@ export function MyCalendarTable({
           <tbody className="divide-y divide-gray-100">
             {filtered.map((festival) => {
               const entry = calendarData[festival.id];
+              const benchmarks = entry?.benchmarks || [];
+              const totalLikes = benchmarks.reduce((s, b) => s + (b.metrics?.likes || 0), 0);
               return (
                 <tr
                   key={festival.id}
@@ -249,6 +281,7 @@ export function MyCalendarTable({
                     >
                       <option value="">Select...</option>
                       <option value="Say hi!">Say hi!</option>
+                      <option value="Small Talk">Small Talk</option>
                       <option value="Content Team">Content Team</option>
                       <option value="Design Team">Design Team</option>
                       <option value="Marketing">Marketing</option>
@@ -261,7 +294,7 @@ export function MyCalendarTable({
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-1.5">
                       <Image size={14} className="text-gray-400 shrink-0" />
-                      <span className="text-gray-400 text-sm">$</span>
+                      <span className="text-gray-400 text-sm">{currencySymbol}</span>
                       <input
                         type="number"
                         value={entry?.creative_budget || 0}
@@ -279,8 +312,8 @@ export function MyCalendarTable({
                   {/* Media Budget */}
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-gray-400 text-sm">$</span>
-                      <span className="text-gray-400 text-sm">$</span>
+                      <span className="text-gray-400 text-sm">{currencySymbol}</span>
+                      <span className="text-gray-400 text-sm">{currencySymbol}</span>
                       <input
                         type="number"
                         value={entry?.media_budget || 0}
@@ -297,9 +330,27 @@ export function MyCalendarTable({
 
                   {/* Benchmarking */}
                   <td className="px-4 py-3.5">
-                    <button className="text-sm font-medium text-green-600 hover:text-green-700 transition-colors">
-                      Add
-                    </button>
+                    {benchmarks.length > 0 ? (
+                      <button
+                        onClick={() => setBenchmarkFestivalId(festival.id)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1"
+                      >
+                        <BarChart3 size={13} />
+                        <span>{benchmarks.length} link{benchmarks.length > 1 ? "s" : ""}</span>
+                        {totalLikes > 0 && (
+                          <span className="text-xs text-gray-500 ml-1">
+                            {formatMetricShort(totalLikes)} likes
+                          </span>
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setBenchmarkFestivalId(festival.id)}
+                        className="text-sm font-medium text-green-600 hover:text-green-700 transition-colors"
+                      >
+                        Add
+                      </button>
+                    )}
                   </td>
 
                   {/* Actions (3-dot menu) */}
@@ -319,7 +370,7 @@ export function MyCalendarTable({
                             className="fixed inset-0 z-40"
                             onClick={() => setOpenMenuId(null)}
                           />
-                          <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-1">
+                          <div className="absolute right-0 bottom-full mb-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-1">
                             <button
                               onClick={() => {
                                 onViewDetails(festival);
@@ -361,6 +412,18 @@ export function MyCalendarTable({
           </tbody>
         </table>
       </div>
+
+      {/* Benchmark Modal */}
+      {benchmarkFestival && benchmarkFestivalId && (
+        <BenchmarkModal
+          festivalName={benchmarkFestival.name}
+          benchmarks={calendarData[benchmarkFestivalId]?.benchmarks || []}
+          onSave={(benchmarks) =>
+            onUpdateEntry(benchmarkFestivalId, { benchmarks })
+          }
+          onClose={() => setBenchmarkFestivalId(null)}
+        />
+      )}
     </div>
   );
 }
