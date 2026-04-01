@@ -65,22 +65,45 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
     setFetchError("");
 
     try {
-      // Try oEmbed for Instagram
-      if (detectedPlatform === "instagram") {
-        const oembedUrl = `https://api.instagram.com/oembed?url=${encodeURIComponent(url)}&omitscript=true`;
-        const res = await fetch(oembedUrl);
-        if (res.ok) {
-          const data = await res.json();
-          // oEmbed doesn't return engagement metrics, but confirms valid post
-          setFetchError("Post found! Enter metrics manually from the post.");
-        } else {
-          setFetchError("Could not fetch. Enter metrics manually.");
-        }
+      // Call our server-side API route to avoid CORS restrictions
+      const res = await fetch(`/api/fetch-metrics?url=${encodeURIComponent(url.trim())}`);
+      if (!res.ok) throw new Error("API error");
+      const data = await res.json() as {
+        metrics?: { views?: number; likes?: number; comments?: number };
+        note?: string;
+        error?: string;
+        title?: string;
+      };
+
+      if (data.error) {
+        setFetchError(data.error);
+        return;
+      }
+
+      // Auto-fill whatever metrics were returned
+      let filled = 0;
+      if (data.metrics?.views !== undefined) {
+        setViews(String(data.metrics.views));
+        filled++;
+      }
+      if (data.metrics?.likes !== undefined) {
+        setLikes(String(data.metrics.likes));
+        filled++;
+      }
+      if (data.metrics?.comments !== undefined) {
+        setComments(String(data.metrics.comments));
+        filled++;
+      }
+
+      if (filled > 0) {
+        setFetchError(`✅ Fetched ${filled} metric${filled > 1 ? "s" : ""} successfully! Review and add more if needed.`);
+      } else if (data.note) {
+        setFetchError(data.note);
       } else {
-        setFetchError("Auto-fetch not available for this platform. Enter metrics manually.");
+        setFetchError("No public metrics found. Please enter manually.");
       }
     } catch {
-      setFetchError("Could not fetch. Enter metrics manually.");
+      setFetchError("Could not fetch metrics. Please enter manually.");
     } finally {
       setFetching(false);
     }
@@ -223,9 +246,17 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
               <button
                 onClick={handleFetchMetrics}
                 disabled={!url.trim() || fetching}
-                className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-1.5"
               >
-                {fetching ? "..." : "Fetch"}
+                {fetching ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                    Fetching...
+                  </>
+                ) : "Auto-Fetch"}
               </button>
             </div>
 
@@ -238,7 +269,11 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
               </div>
             )}
 
-            {fetchError && <p className="text-xs text-amber-600">{fetchError}</p>}
+            {fetchError && (
+              <p className={`text-xs ${fetchError.startsWith("✅") ? "text-green-600" : "text-amber-600"}`}>
+                {fetchError}
+              </p>
+            )}
 
             {/* Manual metrics */}
             <div className="grid grid-cols-2 gap-2">
