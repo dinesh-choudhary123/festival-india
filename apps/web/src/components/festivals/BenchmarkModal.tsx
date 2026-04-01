@@ -35,9 +35,21 @@ const PLATFORM_COLORS: Record<string, string> = {
   other: "bg-gray-600 text-white",
 };
 
+const POST_TYPES: { value: BenchmarkEntry["type"]; label: string }[] = [
+  { value: "reel", label: "Reel" },
+  { value: "post", label: "Post" },
+  { value: "story", label: "Story" },
+  { value: "video", label: "Video" },
+  { value: "tweet", label: "Tweet" },
+  { value: "short", label: "Short" },
+  { value: "other", label: "Other" },
+];
+
 export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: BenchmarkModalProps) {
   const [entries, setEntries] = useState<BenchmarkEntry[]>(benchmarks || []);
   const [url, setUrl] = useState("");
+  const [postType, setPostType] = useState<BenchmarkEntry["type"]>("post");
+  const [brandName, setBrandName] = useState("");
   const [likes, setLikes] = useState("");
   const [comments, setComments] = useState("");
   const [shares, setShares] = useState("");
@@ -79,6 +91,8 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
     const entry: BenchmarkEntry = {
       url: url.trim(),
       platform: detectedPlatform || "other",
+      type: postType,
+      brand_name: brandName.trim(),
       metrics: {
         likes: likes ? parseInt(likes) : undefined,
         comments: comments ? parseInt(comments) : undefined,
@@ -89,6 +103,8 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
     };
     setEntries([...entries, entry]);
     setUrl("");
+    setPostType("post");
+    setBrandName("");
     setLikes("");
     setComments("");
     setShares("");
@@ -124,10 +140,20 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
               <h4 className="text-sm font-medium text-gray-700">Tracked Posts</h4>
               {entries.map((entry, idx) => (
                 <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${PLATFORM_COLORS[entry.platform]}`}>
-                    {entry.platform}
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${PLATFORM_COLORS[entry.platform]}`}>
+                      {entry.platform}
+                    </span>
+                    {entry.type && (
+                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700">
+                        {entry.type}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
+                    {entry.brand_name && (
+                      <span className="text-xs font-semibold text-gray-800 block">{entry.brand_name}</span>
+                    )}
                     <a
                       href={entry.url}
                       target="_blank"
@@ -154,6 +180,33 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
           {/* Add new */}
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-gray-700">Add Social Media Post</h4>
+
+            {/* Type dropdown */}
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Type</label>
+              <select
+                value={postType}
+                onChange={(e) => setPostType(e.target.value as BenchmarkEntry["type"])}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              >
+                <option value="" disabled>Select type</option>
+                {POST_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Brand Name */}
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Name of the brand</label>
+              <input
+                type="text"
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                placeholder="Enter brand name"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
 
             {/* URL input */}
             <div className="flex gap-2">

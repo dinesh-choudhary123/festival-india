@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { Info, Calendar, MoreVertical, Image, Trash2, FileText, BarChart3 } from "lucide-react";
 import { formatDate, CURRENCIES, getCurrencySymbol } from "@/lib/constants";
 import { TypeBadge, ScopeBadge } from "./FestivalBadge";
@@ -45,7 +45,19 @@ export function MyCalendarTable({
   const [scopeFilter, setScopeFilter] = useState<string>("All");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [benchmarkFestivalId, setBenchmarkFestivalId] = useState<string | null>(null);
+
+  const handleMenuToggle = useCallback((festivalId: string, btnEl: HTMLButtonElement) => {
+    if (openMenuId === festivalId) {
+      setOpenMenuId(null);
+      setMenuPos(null);
+    } else {
+      const rect = btnEl.getBoundingClientRect();
+      setMenuPos({ top: rect.top, left: rect.right });
+      setOpenMenuId(festivalId);
+    }
+  }, [openMenuId]);
 
   const currencySymbol = getCurrencySymbol(currency);
 
@@ -355,55 +367,13 @@ export function MyCalendarTable({
 
                   {/* Actions (3-dot menu) */}
                   <td className="px-4 py-3.5">
-                    <div className="flex justify-end relative">
+                    <div className="flex justify-end">
                       <button
-                        onClick={() =>
-                          setOpenMenuId(openMenuId === festival.id ? null : festival.id)
-                        }
+                        onClick={(e) => handleMenuToggle(festival.id, e.currentTarget)}
                         className="p-1 rounded hover:bg-gray-100 transition-colors"
                       >
                         <MoreVertical size={16} className="text-gray-500" />
                       </button>
-                      {openMenuId === festival.id && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-40"
-                            onClick={() => setOpenMenuId(null)}
-                          />
-                          <div className="absolute right-0 bottom-full mb-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-1">
-                            <button
-                              onClick={() => {
-                                onViewDetails(festival);
-                                setOpenMenuId(null);
-                              }}
-                              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                            >
-                              <Info size={14} />
-                              View Details
-                            </button>
-                            <button
-                              onClick={() => {
-                                onMakePost(festival);
-                                setOpenMenuId(null);
-                              }}
-                              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                            >
-                              <FileText size={14} />
-                              Make Post
-                            </button>
-                            <button
-                              onClick={() => {
-                                onRemoveFromCalendar(festival.id);
-                                setOpenMenuId(null);
-                              }}
-                              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                            >
-                              <Trash2 size={14} />
-                              Remove
-                            </button>
-                          </div>
-                        </>
-                      )}
                     </div>
                   </td>
                 </tr>
@@ -412,6 +382,43 @@ export function MyCalendarTable({
           </tbody>
         </table>
       </div>
+
+      {/* Fixed-position 3-dot menu (rendered outside overflow container) */}
+      {openMenuId && menuPos && (() => {
+        const menuFestival = festivals.find((f) => f.id === openMenuId);
+        if (!menuFestival) return null;
+        return (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => { setOpenMenuId(null); setMenuPos(null); }} />
+            <div
+              className="fixed z-50 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-0.5"
+              style={{ top: menuPos.top - 100, left: menuPos.left - 160 }}
+            >
+              <button
+                onClick={() => { onMakePost(menuFestival); setOpenMenuId(null); setMenuPos(null); }}
+                className="flex items-center gap-1.5 w-full px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+              >
+                <FileText size={12} />
+                Make Post
+              </button>
+              <button
+                onClick={() => { onViewDetails(menuFestival); setOpenMenuId(null); setMenuPos(null); }}
+                className="flex items-center gap-1.5 w-full px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+              >
+                <Info size={12} />
+                View Details
+              </button>
+              <button
+                onClick={() => { onRemoveFromCalendar(menuFestival.id); setOpenMenuId(null); setMenuPos(null); }}
+                className="flex items-center gap-1.5 w-full px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50"
+              >
+                <Trash2 size={12} />
+                Remove from Calendar
+              </button>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Benchmark Modal */}
       {benchmarkFestival && benchmarkFestivalId && (

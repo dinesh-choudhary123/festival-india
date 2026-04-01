@@ -41,6 +41,8 @@ export interface FestivalFilters {
 export interface BenchmarkEntry {
   url: string;
   platform: "instagram" | "twitter" | "facebook" | "youtube" | "other";
+  type: "reel" | "post" | "story" | "video" | "tweet" | "short" | "other";
+  brand_name: string;
   metrics: {
     likes?: number;
     comments?: number;
