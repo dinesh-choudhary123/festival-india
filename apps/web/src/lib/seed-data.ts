@@ -2060,7 +2060,9 @@ function generateUSYear(y: number): Festival[] {
   const cyberMonday   = addDays(thanksgiving, 4);
   const dstStart      = nthDay(y, 3, 0, 2);   // 2nd Sunday Mar
   const dstEnd        = nthDay(y, 11, 0, 1);  // 1st Sunday Nov
-  const superBowl     = nthDay(y, 2, 0, 1);   // approx 1st Sunday Feb (varies)
+  const superBowl     = nthDay(y, 2, 0, 2);   // 2nd Sunday Feb (Super Bowl is always ~2nd Sun Feb)
+  const grammys       = nthDay(y, 2, 0, 1);   // 1st Sunday Feb (Grammy Awards)
+  const goldenGlobes  = nthDay(y, 1, 0, 1);   // 1st Sunday Jan (Golden Globe Awards)
   const natDonutDay   = nthDay(y, 6, 5, 1);   // 1st Friday Jun
   const natIceCreamDay= nthDay(y, 7, 0, 3);   // 3rd Sunday Jul
   const natParentsDay = nthDay(y, 7, 0, 4);   // 4th Sunday Jul
@@ -2068,11 +2070,27 @@ function generateUSYear(y: number): Festival[] {
   const natVoterRegDay= nthDay(y, 9, 2, 4);   // 4th Tuesday Sep
   const worldSeries   = addDays(nthDay(y, 10, 5, -1), 0); // late Oct approx last Fri
   const kentuckyDerby = nthDay(y, 5, 6, 1);   // 1st Saturday May
-  const indyStart     = nthDay(y, 5, 0, -1);  // last Sunday May (Memorial weekend)
-  const metGala       = nthDay(y, 5, 1, 1);   // 1st Monday May (approx)
+  const preakness     = nthDay(y, 5, 6, 3);   // 3rd Saturday May (Preakness Stakes)
+  const belmontStakes = nthDay(y, 6, 6, 2);   // 2nd Saturday June (Belmont Stakes)
+  const indyStart     = nthDay(y, 5, 0, -1);  // last Sunday May (Memorial weekend ≈ Indy 500)
+  const metGala       = nthDay(y, 5, 1, 1);   // 1st Monday May (Met Gala)
   const natBossDay    = `${y}-10-16`;
   const natNursesDay  = `${y}-05-06`;
-  const natTeachersDay= nthDay(y, 5, 2, 1);   // 1st Tuesday May (approx)
+  const natTeachersDay= nthDay(y, 5, 2, 1);   // 1st Tuesday May
+  const bostonMarathon= nthDay(y, 4, 1, 3);   // 3rd Monday Apr = Patriots Day
+  const marchMadnessSt= nthDay(y, 3, 4, 3);   // 3rd Thursday Mar (NCAA Tournament First Round)
+  const ncaaFinals    = nthDay(y, 4, 1, 1);   // 1st Monday Apr (NCAA Championship)
+  const mlbOpeningDay = nthDay(y, 3, 4, -1);  // Last Thursday Mar (MLB Opening Day approx)
+  const nbaPlayoffs   = nthDay(y, 4, 6, 3);   // 3rd Saturday Apr (NBA Playoffs begin approx)
+  const usOpenGolf    = nthDay(y, 6, 4, 3);   // 3rd Thursday Jun (US Open Golf)
+  const pgaChamp      = nthDay(y, 5, 4, 3);   // 3rd Thursday May (PGA Championship)
+  const tonyAwards    = nthDay(y, 6, 0, 1);   // 1st Sunday Jun (Tony Awards)
+  const emmyAwards    = nthDay(y, 9, 0, 3);   // 3rd Sunday Sep (Emmy Awards approx)
+  const cmaAwards     = nthDay(y, 11, 3, 1);  // 1st Wednesday Nov (CMA Awards)
+  const mastersThu    = nthDay(y, 4, 4, 2);   // 2nd Thursday Apr (The Masters start)
+  const nflWildCard   = nthDay(y, 1, 6, 2);   // 2nd Saturday Jan (NFL Wild Card Weekend)
+  const nflChamp      = nthDay(y, 1, 6, 3);   // 3rd Saturday Jan (NFL Championship games)
+  const nflDivision   = nthDay(y, 1, 6, 2);   // 2nd Sat Jan = Wild Card start
 
   // Hanukkah (varies; pre-computed)
   const hanukkahMap: Record<number, string> = {
@@ -2089,6 +2107,27 @@ function generateUSYear(y: number): Festival[] {
   const roshHashanah = roshHashanahMap[y] || roshHashanahMap[2026].replace(/^\d{4}/, String(y));
   const yomKippur = addDays(roshHashanah, 9);
 
+  // Purim (varies; pre-computed)
+  const purimMap: Record<number, string> = {
+    2026: `${y}-03-03`, 2027: `${y}-03-23`, 2028: `${y}-03-11`,
+    2029: `${y}-03-01`, 2030: `${y}-03-20`,
+  };
+  const purim = purimMap[y] || purimMap[2026].replace(/^\d{4}/, String(y));
+
+  // Passover / Pesach first seder (varies)
+  const passoverMap: Record<number, string> = {
+    2026: `${y}-04-02`, 2027: `${y}-03-23`, 2028: `${y}-04-11`,
+    2029: `${y}-03-30`, 2030: `${y}-04-18`,
+  };
+  const passover = passoverMap[y] || passoverMap[2026].replace(/^\d{4}/, String(y));
+
+  // Lunar New Year / Chinese New Year (varies)
+  const lunarNewYearMap: Record<number, string> = {
+    2026: `${y}-02-17`, 2027: `${y}-02-06`, 2028: `${y}-01-26`,
+    2029: `${y}-02-13`, 2030: `${y}-02-03`,
+  };
+  const lunarNewYear = lunarNewYearMap[y] || lunarNewYearMap[2026].replace(/^\d{4}/, String(y));
+
   return [
     // ── January ──
     us("us-newyear",     "New Year's Day",            `${y}-01-01`, "Festival Day", "National", "Cultural",
@@ -2097,8 +2136,6 @@ function generateUSYear(y: number): Festival[] {
        "A federal holiday honoring civil rights leader Dr. Martin Luther King Jr.", "USA", "Celebrates Dr. King's legacy of equality and justice.", "Community service, marches, speeches, educational events.", true),
     us("us-inauguration", "Inauguration Day",          `${y}-01-20`, "Observance",   "National", "Political",
        "Presidential Inauguration Day held every four years (2025, 2029...).", "Washington D.C.", "Marks the swearing-in of the U.S. President.", "Oath of office ceremony, inaugural parade, balls.", false),
-    us("us-groundhog",   "Groundhog Day",              `${y}-02-02`, "Social Day",   "National", "Fun",
-       "Tradition of predicting six more weeks of winter based on a groundhog's shadow.", "Punxsutawney, Pennsylvania", "Pennsylvania German tradition brought by immigrants.", "Watching Punxsutawney Phil emerge; media coverage.", false),
     us("us-natblooddonor","National Blood Donor Month", `${y}-01-01`, "Observance",  "National", "Health",
        "Awareness month encouraging Americans to donate blood.", "USA", "Addresses winter blood shortage needs.", "Blood drives, donation campaigns.", false),
     us("us-natmentoring", "National Mentoring Month",   `${y}-01-01`, "Observance",  "National", "Social",
@@ -2116,7 +2153,7 @@ function generateUSYear(y: number): Festival[] {
     us("us-superbowl",   "Super Bowl Sunday",          superBowl,    "Social Day",   "National", "Fun",
        "The NFL championship game — America's biggest annual sporting event.", "USA", "The final game of the NFL season, watched by ~100M Americans.", "Watch parties, food, halftime show, commercials.", false),
     us("us-groundhogd",  "Groundhog Day",              `${y}-02-02`, "Social Day",   "National", "Fun",
-       "Punxsutawney Phil predicts the weather.", "Punxsutawney, PA", "German-American tradition.", "Watching Phil emerge at sunrise.", false),
+       "Punxsutawney Phil predicts whether there will be six more weeks of winter.", "Punxsutawney, Pennsylvania", "Pennsylvania German immigrant tradition dating to the 1800s.", "Watching Phil emerge at sunrise; media coverage; weather prediction.", false),
     us("us-valentines",  "Valentine's Day",            `${y}-02-14`, "Social Day",   "Global",   "Cultural",
        "A day celebrating love and romance.", "USA & worldwide", "Named after Saint Valentine, patron saint of lovers.", "Exchanging cards, flowers, chocolates; romantic dinners.", false),
     us("us-nationalpizza","National Pizza Day",         `${y}-02-09`, "Social Day",   "National", "Fun",
@@ -2127,8 +2164,8 @@ function generateUSYear(y: number): Festival[] {
        "First day of Lent, 46 days before Easter.", "USA", "Christian tradition of repentance and fasting.", "Church services, ash crosses on forehead.", false),
     us("us-mardigras",   "Mardi Gras",                 mardiGras,    "Festival Day", "Regional", "Cultural",
        "Fat Tuesday — the culmination of Carnival season before Lent.", "New Orleans, Louisiana", "French Catholic tradition brought to Louisiana.", "Parades, beads, costumes, king cake, music.", false, ["Louisiana", "Alabama", "Mississippi"]),
-    us("us-grammys",     "Grammy Awards",              `${y}-02-05`, "Social Day",   "National", "Cultural",
-       "The Recording Academy's annual music awards ceremony.", "Los Angeles, CA", "Recognizes outstanding achievements in the music industry.", "TV viewing parties, red carpet fashion.", false),
+    us("us-grammys",     "Grammy Awards",              grammys,      "Social Day",   "National", "Cultural",
+       "The Recording Academy's annual music awards ceremony.", "Los Angeles, CA", "Recognizes outstanding achievements in the music industry; held 1st Sunday of February.", "TV viewing parties, red carpet fashion.", false),
 
     // ── March ──
     us("us-womenshistory","Women's History Month",     `${y}-03-01`, "Observance",   "National", "Social",
@@ -2153,7 +2190,7 @@ function generateUSYear(y: number): Festival[] {
        "A day for pranks, jokes, and hoaxes.", "USA", "Long tradition of humor and trickery on April 1.", "Playing pranks, social media jokes, office humor.", false),
 
     // ── April ──
-    us("us-ncaafinale",  "NCAA March Madness Finals",  `${y}-04-07`, "Social Day",   "National", "Fun",
+    us("us-ncaafinale",  "NCAA March Madness Finals",  ncaaFinals,   "Social Day",   "National", "Fun",
        "College basketball's national championship game.", "USA", "The culmination of the 68-team NCAA tournament.", "Watch parties, brackets, sports bars.", false),
     us("us-autism",      "Autism Awareness Month",     `${y}-04-01`, "Observance",   "National", "Health",
        "Raises awareness and acceptance for autism spectrum disorder.", "USA", "Promotes inclusion and support for autistic individuals.", "Light it Up Blue, fundraising, educational events.", false),
@@ -2333,7 +2370,7 @@ function generateUSYear(y: number): Festival[] {
        "The Jewish New Year — a time of prayer, reflection, and renewal.", "USA", "Marks the beginning of the High Holy Days.", "Synagogue services, apples and honey, round challah.", false),
     us("us-yomkippur",  "Yom Kippur",                yomKippur,    "Observance",  "National", "Religious",
        "The Jewish Day of Atonement — the holiest day of the Jewish year.", "USA", "A day of fasting, prayer, and repentance.", "Fasting, synagogue services, wearing white, reflection.", false),
-    us("us-bostonmarathon","Boston Marathon",         `${y}-04-21`, "Social Day",  "National", "Fun",
+    us("us-bostonmarathon","Boston Marathon",          bostonMarathon,"Social Day", "National", "Fun",
        "The world's oldest annual marathon, held on Patriots' Day.", "Boston, Massachusetts", "First run in 1897, inspired by the Olympic marathon.", "Running, watching, spectating along Boylston Street.", false, ["Massachusetts"]),
     us("us-coachella",  "Coachella Valley Music & Arts Festival", `${y}-04-12`, "Festival Day","Regional","Cultural",
        "One of the largest and most famous music festivals in the world.", "Indio, California", "Started in 1999, featuring art installations and top musical acts.", "Concerts, fashion, art, camping.", false, ["California"]),
@@ -2375,7 +2412,7 @@ function generateUSYear(y: number): Festival[] {
        "Raises awareness of human trafficking on a single national day.", "USA", "Blue heart symbol adopted to fight trafficking.", "Social media blue hearts, awareness campaigns.", false),
     us("us-inaugday",   "Martin Luther King Jr. Day Parade", mlkDay, "Social Day","National","Cultural",
        "Parades and marches held across the US on MLK Day.", "USA (Atlanta, NYC, LA, etc.)", "Communities march in honour of Dr. King's legacy.", "Parades, speeches, community service projects.", false),
-    us("us-nflplayoffs","NFL Playoffs Begin",         `${y}-01-11`, "Social Day","National","Fun",
+    us("us-nflplayoffs","NFL Wild Card Weekend",       nflWildCard,  "Social Day","National","Fun",
        "The start of the NFL playoff season leading to the Super Bowl.", "USA", "12 teams compete in a single-elimination tournament.", "Watch parties, fantasy playoffs, sports bars.", false),
     us("us-collegebowl","College Football National Championship", `${y}-01-08`,"Social Day","National","Fun",
        "The College Football Playoff National Championship game.", "USA", "Determines the best college football team in the nation.", "Watch parties, tailgating, campus celebrations.", false),
@@ -2383,7 +2420,7 @@ function generateUSYear(y: number): Festival[] {
     // ── More February ──
     us("us-daytona500", "Daytona 500",               nthDay(y,2,0,3),"Social Day","National","Fun",
        "The 'Great American Race' — the most prestigious NASCAR race.", "Daytona International Speedway, Florida", "First held in 1959; kicks off the NASCAR Cup season.", "Watching the race, tailgating, motor sport events.", false, ["Florida"]),
-    us("us-purim",      "Purim",                     `${y}-02-25`, "Festival Day","National","Religious",
+    us("us-purim",      "Purim",                     purim,        "Festival Day","National","Religious",
        "Jewish holiday celebrating Queen Esther's saving of the Jewish people.", "USA", "From the Book of Esther; a joyous celebration with costumes.", "Hamantaschen, costumes, reading Megillah, giving gifts.", false),
     us("us-presidentbirthday","George Washington's Birthday (Actual)", `${y}-02-22`,"Observance","National","Political",
        "The actual birthday of America's first President.", "USA", "Washington was born February 22, 1732.", "Patriotic events, cherry pie (folklore), historical tributes.", false),
@@ -2413,15 +2450,15 @@ function generateUSYear(y: number): Festival[] {
        "Catholic feast day celebrating Joseph, husband of Mary — major in Italian-American communities.", "USA (New Orleans, NYC)", "March 19 is St Joseph's feast day.", "Altars with food, Italian-American celebrations, zeppole.", false, ["Louisiana","New York"]),
     us("us-cherryblossom","National Cherry Blossom Festival", `${y}-03-20`, "Festival Day","Regional","Cultural",
        "Celebrates the blooming of cherry blossom trees gifted by Japan in 1912.", "Washington D.C.", "Japan gave 3,000 trees to the US in 1912 as a symbol of friendship.", "Parade, cultural events, picnics under the blossoms.", false, ["Washington D.C."]),
-    us("us-mastersgolf","The Masters Golf Tournament Begins", `${y}-04-10`, "Social Day","National","Fun",
+    us("us-mastersgolf","The Masters Golf Tournament",  mastersThu,  "Social Day","National","Fun",
        "The first Major championship of the golf season.", "Augusta National Golf Club, Georgia", "First held in 1934; one of golf's most prestigious events.", "Watching the green jacket ceremony, pimento cheese sandwiches.", false, ["Georgia"]),
     us("us-natlplant",  "National Plant a Flower Day", `${y}-03-12`,"Social Day","National","Environmental",
        "Encourages people to plant flowers and celebrate spring.", "USA", "Promotes gardening and connection to nature.", "Planting flowers, visiting garden centers.", false),
-    us("us-passover",   "Passover Begins",            `${y}-04-02`, "Festival Day","National","Religious",
+    us("us-passover",   "Passover (Pesach) Begins",    passover,     "Festival Day","National","Religious",
        "Jewish holiday commemorating the liberation of Israelites from Egyptian slavery.", "USA", "One of the most widely observed Jewish holidays.", "Seder dinner, Haggadah reading, matzah, no leavened bread.", false),
 
     // ── More April ──
-    us("us-londonmarathon","Boston Marathon",         `${y}-04-21`, "Social Day","National","Fun",
+    us("us-nycmarathonspring","NYC Spring Half Marathon", `${y}-03-19`, "Social Day","National","Fun",
        "The world's oldest annual marathon — a Boston Patriots' Day tradition.", "Boston, Massachusetts", "First run in 1897, attracting elite runners worldwide.", "Watching runners, cheering along Boylston Street, heartbreak hill.", false, ["Massachusetts"]),
     us("us-jazzfest",   "New Orleans Jazz & Heritage Festival", `${y}-04-24`,"Festival Day","Regional","Cultural",
        "One of America's greatest music and cultural festivals.", "New Orleans, Louisiana", "Started in 1970; showcases jazz, blues, gospel, R&B, and Cajun food.", "Live music, food, crafts, dancing.", false, ["Louisiana"]),
@@ -2437,7 +2474,7 @@ function generateUSYear(y: number): Festival[] {
        "The entire month of April is dedicated to environmental awareness.", "USA & worldwide", "Earth Day is April 22; the whole month supports environmental action.", "Cleanups, sustainability pledges, eco events.", false),
     us("us-takekids",   "Take Our Daughters and Sons to Work Day", nthDay(y,4,4,4),"Observance","National","Social",
        "Annual event where parents bring children to their workplace.", "USA", "Started in 1993 by the Ms. Foundation for Women.", "Kids visit workplaces, career exploration.", false),
-    us("us-derbyprepk", "Preakness Stakes",           nthDay(y,5,6,3),"Social Day","National","Fun",
+    us("us-derbyprepk", "Preakness Stakes",            preakness,    "Social Day","National","Fun",
        "The second leg of the Triple Crown of horse racing.", "Pimlico Race Course, Baltimore, Maryland", "First held in 1873; Black-eyed Susans adorn the winner.", "Watching the race, mint juleps, Black-eyed Susans.", false, ["Maryland"]),
 
     // ── More May ──
@@ -2453,7 +2490,7 @@ function generateUSYear(y: number): Festival[] {
        "Encourages Americans to commute by bicycle.", "USA", "Promotes cycling as sustainable transportation.", "Cycling to work, bike events, helmet giveaways.", false),
     us("us-malcolm",    "Malcolm X Day",              `${y}-05-19`, "Observance","National","Social",
        "Commemorates civil rights leader Malcolm X, born May 19, 1925.", "USA", "Malcolm X was a powerful voice for Black rights and self-determination.", "Community events, readings, film screenings.", false),
-    us("us-belmont",    "Belmont Stakes",             nthDay(y,6,6,2),"Social Day","National","Fun",
+    us("us-belmont",    "Belmont Stakes",              belmontStakes, "Social Day","National","Fun",
        "The third and final leg of the Triple Crown of horse racing.", "Belmont Park, Elmont, New York", "First held in 1867; the longest Triple Crown race at 1.5 miles.", "Watching the race, potential Triple Crown drama.", false, ["New York"]),
     us("us-vesnmay",    "Vesak Day",                  `${y}-05-12`, "Festival Day","National","Religious",
        "Buddhist holiday celebrating the birth, enlightenment, and death of Buddha.", "USA", "Celebrated by Buddhist communities across America.", "Temple ceremonies, meditation, lantern releases.", false),
@@ -2467,7 +2504,7 @@ function generateUSYear(y: number): Festival[] {
        "International day celebrating and raising awareness for the world's oceans.", "USA & worldwide", "The ocean covers 71% of Earth's surface and supports all life.", "Beach cleanups, ocean events, marine conservation.", false),
     us("us-bestfriends","National Best Friends Day",  `${y}-06-08`, "Social Day","National","Fun",
        "A day to celebrate your best friends.", "USA", "Recognises the importance of deep friendships.", "Spending time with best friends, social media tributes.", false),
-    us("us-natcheese2", "National Cheese Day",        `${y}-06-04`, "Social Day","National","Fun",
+    us("us-natbestfriend2","National Best Friend Day",  `${y}-06-08`, "Social Day","National","Fun",
        "Another national day to celebrate cheese!", "USA", "One of the world's most consumed dairy products.", "Cheese platters, cheesesteak, grilled cheese.", false),
     us("us-usopentennis","US Open Tennis Championships", `${y}-08-25`,"Social Day","National","Fun",
        "The final Grand Slam tennis tournament of the year.", "USTA Billie Jean King National Tennis Center, NYC", "First US national championship held in 1881.", "Watching matches, night sessions, celebrity sightings.", false, ["New York"]),
@@ -2491,7 +2528,7 @@ function generateUSYear(y: number): Festival[] {
        "Celebrates one of America's most beloved side dishes.", "USA", "Americans consume 29 pounds of french fries per person per year.", "Eating fries, restaurant deals, homemade fries.", false),
     us("us-natmoonday", "National Moon Day",          `${y}-07-20`, "Observance","National","Cultural",
        "Commemorates Apollo 11's moon landing on July 20, 1969.", "USA", "Neil Armstrong became the first human to walk on the moon.", "Stargazing, NASA events, space museum visits.", false),
-    us("us-nathotdog",  "National Hot Dog Day",       `${y}-07-23`, "Social Day","National","Fun",
+    us("us-natblueberry","National Blueberry Day",     `${y}-07-11`, "Social Day","National","Fun",
        "Celebrates America's classic ballpark food.", "USA", "Americans eat about 20 billion hot dogs per year.", "Hot dog cookouts, ballgame attendance, eating contests.", false),
     us("us-natlasagna", "National Lasagna Day",       `${y}-07-29`, "Social Day","National","Fun",
        "A day to celebrate the classic Italian-American baked pasta dish.", "USA", "Lasagna is one of America's most popular Italian dishes.", "Making or ordering lasagna, Italian restaurant visits.", false),
@@ -2577,6 +2614,200 @@ function generateUSYear(y: number): Festival[] {
        "The main feast of Kwanzaa held on December 31.", "USA", "Karamu is the grand feast and celebration of African American heritage.", "Feasting, community gathering, candle lighting, gifts.", false),
     us("us-wintervacation","School Winter Break",     `${y}-12-23`, "Social Day","National","Cultural",
        "Annual school winter vacation period across America.", "USA", "Most US schools are closed for 1-2 weeks around Christmas and New Year.", "Family travel, holiday activities, time off school.", false),
+
+    // ══════════════════════════════════════════════════════════
+    // EXPANSION BATCH — additional US events to reach 300+
+    // ══════════════════════════════════════════════════════════
+
+    // ── January (additional) ──
+    us("us-golden-globes","Golden Globe Awards",       goldenGlobes, "Social Day","National","Cultural",
+       "Annual ceremony honoring the best in film and television.", "Beverly Hills, CA", "Awarded by the Hollywood Foreign Press Association since 1944.", "Watching the ceremony, red carpet coverage, celebrity fashion.", false, ["California"]),
+    us("us-natpat-day",  "National Patriot's Day",    `${y}-01-19`, "Observance","National","Political",
+       "Observance honoring those who have protected American freedom.", "USA", "Recognized in many states; patriotic ceremonies and tributes.", "Flag-raising, school programs, veteran tributes.", false),
+    us("us-nathotchoc",  "National Hot Chocolate Day",`${y}-01-31`, "Social Day","National","Fun",
+       "A day to enjoy America's favorite winter drink.", "USA", "Americans drink over 10 million cups of hot chocolate per day in winter.", "Hot chocolate specials, recipes, café deals.", false),
+    us("us-nathandwrit", "National Handwriting Day",  `${y}-01-23`, "Observance","National","Cultural",
+       "Celebrates the art of handwriting on John Hancock's birthday.", "USA", "Named for John Hancock whose signature on the Declaration of Independence is iconic.", "Writing by hand, calligraphy workshops, letter writing.", false),
+    us("us-nflconf",     "NFL Conference Championships",nflChamp,   "Social Day","National","Fun",
+       "The NFC and AFC Championship Games determining the two Super Bowl teams.", "USA", "The penultimate round of the NFL playoffs; huge TV ratings.", "Watch parties, tailgating, playoff excitement.", false),
+
+    // ── February (additional) ──
+    us("us-chinesenewyear","Lunar New Year",           lunarNewYear, "Festival Day","National","Cultural",
+       "Celebrated by Chinese, Vietnamese, Korean and other Asian communities across America.", "San Francisco, NYC, LA, Chicago", "America's 22 million Asian Americans celebrate with traditional festivities.", "Parades, fireworks, family dinners, lion dances, red envelopes.", false, ["California","New York"]),
+    us("us-oscars",      "Academy Awards (Oscars)",    nthDay(y,3,0,1), "Social Day","National","Cultural",
+       "The most prestigious awards ceremony in the film industry.", "Dolby Theatre, Hollywood, CA", "Awarded by the Academy of Motion Picture Arts and Sciences since 1929.", "Watching the ceremony, Oscar pools, red carpet fashion.", false, ["California"]),
+    us("us-teddyroosevelt","Theodore Roosevelt Day",  `${y}-02-06`, "Observance","National","Political",
+       "Honors President Theodore Roosevelt, born February 6, 1858.", "USA", "Roosevelt established the National Parks system and was a conservation pioneer.", "Visits to national parks, conservation events, history talks.", false),
+    us("us-natsuperheroeday","National Superhero Day", `${y}-04-28`, "Social Day","National","Fun",
+       "Celebrates superheroes both fictional and real-life.", "USA", "Created by Marvel Comics employees in 1995.", "Wearing superhero costumes, comic book events, Marvel/DC marathons.", false),
+    us("us-natretroday",  "National Retro Day",        `${y}-02-27`, "Social Day","National","Fun",
+       "A day to celebrate nostalgia and retro culture.", "USA", "Americans love their pop culture history — 80s nights, vintage fashion events.", "Retro movie nights, vintage fashion, throwback music playlists.", false),
+
+    // ── March (additional) ──
+    us("us-ncaatourney",  "NCAA March Madness Begins", marchMadnessSt,"Social Day","National","Fun",
+       "The NCAA Division I Men's Basketball Tournament begins.", "USA", "64 teams compete in the most watched college sports event; billions in bracket pools.", "Filling out brackets, watching games, office pools.", false),
+    us("us-natdayofunplugging","National Day of Unplugging", nthDay(y,3,5,1),"Observance","National","Health",
+       "A 24-hour period where people disconnect from technology.", "USA", "Inspired by the Jewish tradition of Shabbat; promotes digital wellness.", "Going offline, outdoor activities, face-to-face interactions.", false),
+    us("us-mlbopening",   "MLB Opening Day",           mlbOpeningDay, "Social Day","National","Fun",
+       "The official start of the Major League Baseball regular season.", "USA", "Every MLB team plays on or near Opening Day; a beloved American baseball tradition.", "Going to games, watching on TV, baseball's return to spring.", false),
+    us("us-easterbasket", "Easter Egg Roll (White House)",addDays(easter, 1),"Social Day","National","Cultural",
+       "The annual White House Easter Egg Roll on the South Lawn.", "White House, Washington D.C.", "Tradition dating back to 1878; families roll Easter eggs on the lawn.", "Egg rolling, Easter activities, meeting the Easter Bunny.", false, ["Washington D.C."]),
+    us("us-greenstday",   "Green Beer Day (St. Patrick's)",`${y}-03-17`,"Social Day","Regional","Fun",
+       "St. Patrick's Day pub celebrations across America.", "Boston, Chicago, NYC, Savannah", "Chicago dyes the Chicago River green; NYC has the nation's largest parade.", "Parades, green clothing, Irish pub celebrations, green beer.", false, ["Illinois","Massachusetts","New York","Georgia"]),
+
+    // ── April (additional) ──
+    us("us-arbor-day",    "Arbor Day",                 nthDay(y,4,5,-1),"Observance","National","Environmental",
+       "A day to plant trees and celebrate their importance.", "USA", "Founded by J. Sterling Morton in Nebraska in 1872; now observed in all 50 states.", "Tree planting, school programs, nature walks.", false),
+    us("us-nba-playoffs", "NBA Playoffs Begin",        nbaPlayoffs,  "Social Day","National","Fun",
+       "The NBA postseason begins — 16 teams compete for the Larry O'Brien Trophy.", "USA", "NBA Playoffs is one of the most watched sports events in spring.", "Watching games, rooting for teams, sports bars.", false),
+    us("us-nat-volunteer","National Volunteer Week",   nthDay(y,4,0,3),"Observance","National","Social",
+       "Week recognizing the contributions of volunteers across America.", "USA", "Over 77 million Americans volunteer; recognized since 1974.", "Volunteer drives, community service, appreciation events.", false),
+    us("us-patriots-day","Patriots' Day",              bostonMarathon,"Observance","Regional","Cultural",
+       "Massachusetts state holiday commemorating the Battles of Lexington and Concord.", "Massachusetts", "The holiday that coincides with the Boston Marathon every 3rd Monday of April.", "Reenactments, parades, marathon spectating.", false, ["Massachusetts","Maine"]),
+    us("us-admin-prof",   "Administrative Professionals Week",nthDay(y,4,3,4),"Observance","National","Social",
+       "Week honoring administrative professionals and office assistants.", "USA", "National Secretaries Week since 1952; renamed in 2000.", "Office appreciation events, lunches, thank-you notes.", false),
+
+    // ── May (additional) ──
+    us("us-pga-champ",    "PGA Championship",          pgaChamp,     "Social Day","National","Fun",
+       "One of golf's four major championships.", "USA (varies)", "Held annually since 1916 by the Professional Golfers' Association of America.", "Watching golf, following the leaderboard, golf events.", false),
+    us("us-memorial-concerts","Memorial Day Concerts", memorialDay,  "Social Day","National","Cultural",
+       "National Memorial Day Concert broadcast live from the U.S. Capitol.", "Washington D.C.", "PBS broadcast honors fallen military with music and tributes; watched by millions.", "Watching concert, remembrance ceremonies, military tributes.", false, ["Washington D.C."]),
+    us("us-hatday",       "National Hat Day",          `${y}-01-15`, "Social Day","National","Fun",
+       "A fun day to wear your favorite hat.", "USA", "Hats have long been part of American culture from baseball caps to cowboy hats.", "Wearing hats, hat contests, hat parades.", false),
+    us("us-nat-train",    "National Train Day",        nthDay(y,5,6,2),"Observance","National","Cultural",
+       "Celebrates the role of railroads in American history.", "USA", "Held near the anniversary of the completion of the Transcontinental Railroad (May 10, 1869).", "Train rides, rail museum events, Amtrak promotions.", false),
+    us("us-memwreath",    "Wreaths Across America",    memorialDay,  "Observance","National","Political",
+       "Volunteers place wreaths on veterans' graves at national cemeteries.", "National cemeteries across USA", "Started at Arlington in 1992; now in 3,700+ locations.", "Wreath placement ceremonies, veteran tribute events.", false),
+
+    // ── June (additional) ──
+    us("us-tony-awards",  "Tony Awards",               tonyAwards,   "Social Day","National","Cultural",
+       "The premier awards ceremony for Broadway theater.", "New York City, NY", "Awarded by the Broadway League and American Theatre Wing since 1947.", "Watching the ceremony, Broadway highlights, theater celebrations.", false, ["New York"]),
+    us("us-us-open-golf", "US Open Golf Championship", usOpenGolf,   "Social Day","National","Fun",
+       "One of golf's four major championships, organized by the USGA.", "USA (varies)", "First played in 1895; consistently features the toughest course setups.", "Watching golf, following the field, spectating at the course.", false),
+    us("us-natsurf",      "National Surfing Day",      `${y}-06-20`, "Social Day","Regional","Fun",
+       "A day celebrating the sport and culture of surfing.", "USA (California, Hawaii, Florida)", "America has a rich surfing heritage from Hawaii to California.", "Surfing, beach events, surf competitions, ocean celebrations.", false, ["California","Hawaii","Florida"]),
+    us("us-pride-chicago","Chicago Pride Parade",      nthDay(y,6,0,-1),"Festival Day","Regional","Social",
+       "One of the largest Pride parades in the Midwest.", "Chicago, Illinois", "Chicago Pride draws over 1 million spectators annually.", "Parade, festival, rainbow flags, LGBTQ+ community celebration.", false, ["Illinois"]),
+    us("us-natdaddyday",  "National Take Your Dog to Work Day", nthDay(y,6,5,4),"Social Day","National","Fun",
+       "A fun day encouraging workplaces to welcome employees' dogs.", "USA", "Started in 1999 to promote pet adoption from shelters.", "Bringing dogs to work, office pet photos, adoption promotions.", false),
+
+    // ── July (additional) ──
+    us("us-nat-french-fries","National French Fry Day", `${y}-07-13`,"Social Day","National","Fun",
+       "Celebrating America's most-ordered side dish.", "USA", "Americans consume 2 million tons of frozen french fries per year.", "Restaurant deals, homemade fries, fast food specials.", false),
+    us("us-nat-moon",     "National Moon Day",         `${y}-07-20`, "Observance","National","Cultural",
+       "Commemorates the first Moon landing on July 20, 1969.", "USA", "Apollo 11 astronauts Neil Armstrong and Buzz Aldrin landed on the Moon.", "Space museum events, NASA retrospectives, stargazing.", false),
+    us("us-allstarbreak", "MLB All-Star Break",        `${y}-07-14`, "Social Day","National","Fun",
+       "The midseason break in Major League Baseball featuring the All-Star Game.", "USA (host city varies)", "Includes Home Run Derby; fans vote for starting players.", "Watching All-Star Game, Home Run Derby, fan voting.", false),
+    us("us-nat-avi",      "National Aviation Day",     `${y}-08-19`, "Observance","National","Cultural",
+       "Celebrates the history and development of aviation on Orville Wright's birthday.", "USA", "Established by FDR in 1939 on Orville Wright's birthday (Aug 19, 1871).", "Air shows, aviation museum visits, flight tributes.", false),
+    us("us-nat-watermelon","National Watermelon Day",  `${y}-08-03`, "Social Day","National","Fun",
+       "A summer day celebrating America's favorite summertime fruit.", "USA", "Watermelon is consumed by 96% of Americans; 17 lbs per person annually.", "Eating watermelon, seed-spitting contests, summer picnics.", false),
+
+    // ── August (additional) ──
+    us("us-nat-golf-day","National Golf Day",          `${y}-08-04`, "Social Day","National","Fun",
+       "Celebrating the sport of golf which has 26 million American players.", "USA", "Golf contributes $84 billion to the US economy annually.", "Playing golf, golf promotions, course events.", false),
+    us("us-paxeast",      "PAX Gaming Festival",       `${y}-08-29`, "Festival Day","Regional","Cultural",
+       "One of the largest gaming festivals in North America.", "Seattle, WA", "Part of the Penny Arcade Expo series; 70,000+ attendees.", "Gaming tournaments, panel discussions, game demos, cosplay.", false, ["Washington"]),
+    us("us-nat-rollercoster","National Roller Coaster Day", `${y}-08-16`,"Social Day","National","Fun",
+       "A day for thrill-seekers to celebrate roller coasters.", "USA", "America has the most roller coasters of any country — 900+.", "Visiting theme parks, riding coasters, amusement park deals.", false),
+    us("us-nat-bacon",    "National Bacon Day",        `${y}-08-31`, "Social Day","National","Fun",
+       "Celebrating America's love of bacon.", "USA", "Americans eat 18 lbs of bacon per person per year.", "Bacon recipes, restaurant specials, cooking events.", false),
+    us("us-nat-beach",    "National Beach Day",        `${y}-08-30`, "Social Day","National","Fun",
+       "A day to enjoy America's beautiful beaches.", "USA", "America has over 12,000 miles of coastline with iconic beaches.", "Beach visits, ocean swimming, beach volleyball, sandcastles.", false),
+
+    // ── September (additional) ──
+    us("us-emmy-awards",  "Emmy Awards",               emmyAwards,   "Social Day","National","Cultural",
+       "The Primetime Emmy Awards honoring excellence in US television.", "Los Angeles, CA", "Awarded by the Television Academy since 1949.", "Watching the ceremony, TV show discussions, red carpet.", false, ["California"]),
+    us("us-labor-parade", "Labor Day Parade (NYC)",    laborDay,     "Social Day","Regional","Cultural",
+       "One of the country's largest Labor Day parades in New York City.", "New York City, NY", "NYC Labor Day parade honors the American labor movement.", "Parade watching, union events, labor rights celebrations.", false, ["New York"]),
+    us("us-nat-cheese-pizza","National Cheese Pizza Day",`${y}-09-05`,"Social Day","National","Fun",
+       "Celebrating the classic plain cheese pizza.", "USA", "Pizza is America's most popular food — $46 billion industry.", "Eating cheese pizza, pizzeria deals, homemade pizza nights.", false),
+    us("us-nat-hike",     "National Hiking Day",       `${y}-11-17`, "Observance","National","Environmental",
+       "Encourages Americans to get outside and explore trails.", "USA", "America has 200,000 miles of trails; hiking is the 3rd most popular outdoor activity.", "Hiking, trail events, National Park visits.", false),
+    us("us-nat-punch-pizza","National Pepperoni Pizza Day",`${y}-09-20`,"Social Day","National","Fun",
+       "Celebrating the most popular pizza topping in America.", "USA", "Pepperoni is ordered on 36% of all US pizzas.", "Eating pepperoni pizza, pizza deals, cooking at home.", false),
+
+    // ── October (additional) ──
+    us("us-world-series-game1","World Series Game 1",  worldSeries,  "Social Day","National","Fun",
+       "Major League Baseball's championship series begins.", "USA", "The Fall Classic crowns the MLB champion; one of sports' most storied events.", "Watching games, sports bars, following the series.", false),
+    us("us-chicago-marathon2","Bank of America Chicago Marathon",`${y}-10-12`,"Social Day","Regional","Fun",
+       "One of the six World Marathon Majors held in Chicago.", "Grant Park, Chicago, IL", "50,000 runners from 100+ countries; one of the world's top marathons.", "Running, spectating, charity fundraising.", false, ["Illinois"]),
+    us("us-nat-pumpkin",  "National Pumpkin Day",      `${y}-10-26`, "Social Day","National","Fun",
+       "Celebrating America's favorite fall fruit.", "USA", "Americans buy 1.5 billion pounds of pumpkins each year.", "Pumpkin carving, pumpkin patches, pumpkin recipes.", false),
+    us("us-fall-harvest", "Fall Harvest Season",       `${y}-10-01`, "Observance","National","Cultural",
+       "Harvest festivals, apple picking, corn mazes — America's fall tradition.", "USA", "Fall harvest tourism generates over $2 billion; apple picking is a beloved autumn activity.", "Apple picking, corn mazes, pumpkin patches, harvest fairs.", false),
+    us("us-fire-prevention","Fire Prevention Week",    nthDay(y,10,0,2),"Observance","National","Social",
+       "Annual fire safety education week — held the week of October 9.", "USA", "Started in 1922 to commemorate the Great Chicago Fire of 1871.", "Fire drills, smoke detector checks, school fire safety programs.", false),
+
+    // ── November (additional) ──
+    us("us-cma-awards",   "CMA Awards (Country Music)", cmaAwards,  "Social Day","National","Cultural",
+       "The Country Music Association Awards — the biggest night in country music.", "Nashville, TN", "The 'Super Bowl of Country Music' broadcast live on ABC.", "Watching the show, country music celebrations, Nashville events.", false, ["Tennessee"]),
+    us("us-london-marathon2","New York City Marathon",  nthDay(y,11,0,1),"Social Day","National","Fun",
+       "The world's largest marathon with 50,000+ runners.", "New York City, NY", "First run in 1970; the NYC Marathon is the world's most attended marathon.", "Running, cheering along the 26.2-mile course, charity fundraising.", false, ["New York"]),
+    us("us-salute-veterans","National Salute to Veteran Patients",`${y}-11-11`,"Observance","National","Political",
+       "VA hospitals nationwide recognize veterans during Veterans Week.", "VA hospitals across USA", "The VA health system serves 9 million veterans annually.", "Hospital visits, tribute events, veteran recognition.", false),
+    us("us-nat-kindness2","World Kindness Day",        `${y}-11-13`, "Observance","Global","Social",
+       "A global day encouraging kindness and compassion.", "USA", "Promoted by the World Kindness Movement since 1998.", "Acts of kindness, social media kindness campaigns, community events.", false),
+    us("us-thanksgiving-run","Thanksgiving Turkey Trot",thanksgiving,"Social Day","National","Fun",
+       "America's beloved Thanksgiving morning tradition — running before the feast.", "USA", "Turkey Trots are held in nearly every US city; over 1 million participants.", "5K runs, fun runs, working up an appetite before Thanksgiving.", false),
+
+    // ── December (additional) ──
+    us("us-nat-sangria",  "National Cocoa Day",        `${y}-12-13`, "Social Day","National","Fun",
+       "A warm celebration of hot cocoa on a cold December day.", "USA", "Hot cocoa is America's #1 winter beverage after coffee.", "Hot cocoa recipes, café specials, cozy winter drinks.", false),
+    us("us-nat-christmas-tree","National Christmas Tree Lighting", nthDay(y,11,4,4),"Festival Day","National","Cultural",
+       "The President lights the National Christmas Tree on the White House Ellipse.", "Washington D.C.", "Annual tradition since 1923; millions watch on TV and online.", "Watching the lighting ceremony, holiday music, White House events.", false, ["Washington D.C."]),
+    us("us-yule",         "Yule / Winter Solstice Festival",`${y}-12-21`,"Festival Day","National","Cultural",
+       "Pagan and neo-pagan celebration of the winter solstice — the rebirth of the sun.", "USA", "Practiced by Wiccan and pagan communities; ancient Norse and Celtic traditions.", "Bonfires, Yule logs, candles, solstice ceremonies.", false),
+    us("us-chanukah-end", "Hanukkah Ends",             addDays(hanukkah, 7),"Observance","National","Religious",
+       "The final night of Hanukkah — all eight candles are lit.", "USA", "The eighth and final night of the Festival of Lights.", "Lighting all candles, gift exchanges, traditional foods (latkes, sufganiyot).", false),
+    us("us-news-years-eve-ball","Times Square New Year's Eve", `${y}-12-31`,"Festival Day","Regional","Cultural",
+       "The world-famous ball drop in Times Square, NYC — watched by 1 billion+ globally.", "Times Square, New York City", "The ball has dropped every year since 1907; 100,000 gather in the square.", "Watching the ball drop, countdown, Auld Lang Syne, fireworks.", false, ["New York"]),
+
+    // ── Additional sports, awards, regional ──
+    us("us-nba-finals",   "NBA Finals",                nthDay(y,6,4,2),"Social Day","National","Fun",
+       "The NBA Championship series — the pinnacle of professional basketball.", "USA", "The NBA Finals is one of the most-watched sports events in America.", "Watch parties, sports bars, following the series.", false),
+    us("us-us-open-tennis2","US Open Tennis Finals",   nthDay(y,9,0,1),"Social Day","National","Fun",
+       "The final weekend of the US Open — one of tennis's four Grand Slams.", "USTA Billie Jean King National Tennis Center, Flushing, NY", "Played since 1881; Arthur Ashe Stadium is the world's largest tennis venue.", "Watching the finals, stadium atmosphere, tennis events.", false, ["New York"]),
+    us("us-kentucky-derby2","Kentucky Oaks",           addDays(kentuckyDerby,-1),"Social Day","Regional","Fun",
+       "Ladies' race at Churchill Downs the day before the Kentucky Derby.", "Churchill Downs, Louisville, KY", "Kentucky Oaks is a Grade 1 stakes race for 3-year-old fillies.", "Horse racing, Pink flowers, fashion, Louisville events.", false, ["Kentucky"]),
+    us("us-sundance",     "Sundance Film Festival",    `${y}-01-20`, "Festival Day","Regional","Cultural",
+       "The premier independent film festival in the United States.", "Park City, Utah", "Founded by Robert Redford in 1978; launches major independent films.", "Film screenings, director Q&As, celebrity sightings, skiing.", false, ["Utah"]),
+    us("us-sxsw-music",   "SXSW Music Festival",      `${y}-03-13`, "Festival Day","Regional","Cultural",
+       "The music portion of SXSW — hundreds of showcases across Austin.", "Austin, Texas", "SXSW Music is where major artists are discovered; launched artists like Billie Eilish.", "Concerts, showcases, industry panels, Austin nightlife.", false, ["Texas"]),
+    us("us-nat-farmers-market","National Farmers Market Week",nthDay(y,8,0,1),"Observance","National","Cultural",
+       "Celebrates the vital role of farmers markets in local food systems.", "USA", "America has 9,000+ farmers markets; they generate $2 billion in sales annually.", "Visiting farmers markets, buying local produce, community events.", false),
+    us("us-indy-car",     "IndyCar Season Opener",     `${y}-03-01`, "Social Day","National","Fun",
+       "The opening race of the NTT IndyCar Series season.", "St. Petersburg, Florida", "IndyCar is America's premier open-wheel racing series.", "Watching the race, attending street circuits, racing events.", false, ["Florida"]),
+    us("us-super-bowl-halftime","Super Bowl Halftime Show", superBowl,"Festival Day","National","Cultural",
+       "The most-watched musical performance in American television history.", "Super Bowl venue", "The halftime show attracts more viewers than the game itself in some years.", "Watching the performance, discussing song choices, social media reactions.", false),
+    us("us-amas",         "American Music Awards",     nthDay(y,11,0,3),"Social Day","National","Cultural",
+       "Fan-voted music awards ceremony honoring top artists of the year.", "Los Angeles, CA", "Launched by Dick Clark in 1973; fan votes determine all winners.", "Watching ceremony, voting for favorites, music celebrations.", false, ["California"]),
+    us("us-nat-tequila",  "National Tequila Day",      `${y}-07-24`, "Social Day","National","Fun",
+       "Celebrating America's love of tequila and Mexican spirits.", "USA", "Americans drink 20 million cases of tequila per year — the most in the world.", "Margaritas, tequila tasting, Mexican restaurant specials.", false),
+    us("us-nat-smoothie", "National Smoothie Day",     `${y}-06-21`, "Social Day","National","Fun",
+       "A summer day celebrating healthy and delicious smoothies.", "USA", "The smoothie industry generates $2 billion annually in the US.", "Making smoothies, juice bar deals, healthy eating promotions.", false),
+    us("us-nat-cookie",   "National Cookie Day",       `${y}-12-04`, "Social Day","National","Fun",
+       "A delicious day celebrating America's favorite baked treat.", "USA", "Americans consume over 2 billion cookies per year.", "Baking cookies, cookie swaps, bakery deals.", false),
+    us("us-nat-pancake",  "National Pancake Day",      `${y}-09-26`, "Social Day","National","Fun",
+       "Celebrating the fluffy American breakfast staple.", "USA", "IHOP alone serves 700 million pancakes per year.", "Eating pancakes, IHOP free pancake promotions, breakfast events.", false),
+    us("us-world-series-end","World Series Champion Crowned",addDays(worldSeries,6),"Social Day","National","Fun",
+       "The final game of the World Series — the MLB champion is crowned.", "USA", "The Fall Classic has been played since 1903; 40 million viewers watch.", "Championship celebration parades, sports bars, fan celebrations.", false),
+    us("us-nat-espresso", "National Espresso Day",     `${y}-11-23`, "Social Day","National","Fun",
+       "Celebrating the intense and beloved coffee drink.", "USA", "The US coffee market is worth $110 billion annually.", "Espresso tasting, café specials, Italian coffee culture.", false),
+    us("us-dc-cherry",    "National Cherry Blossom Festival Parade",`${y}-04-12`,"Festival Day","Regional","Cultural",
+       "The grand parade of the National Cherry Blossom Festival in Washington D.C.", "Washington D.C.", "Japan gifted 3,000 cherry trees to the US in 1912; the festival draws 1.5M visitors.", "Watching the parade, cherry blossom viewing, kite festival.", false, ["Washington D.C."]),
+    us("us-nat-read",     "National Reading Day",      `${y}-03-02`, "Observance","National","Cultural",
+       "Dr. Seuss's birthday — celebrated as a day of reading for children.", "USA", "Read Across America Day; Dr. Seuss (Theodor Geisel) was born March 2, 1904.", "Reading aloud, school events, library visits, Dr. Seuss books.", false),
+    us("us-natl-parks-birthday","National Park Service Birthday",`${y}-08-25`,"Observance","National","Environmental",
+       "Marks the founding of the National Park Service on August 25, 1916.", "USA", "The NPS manages 63 national parks covering 85 million acres.", "Free entry to national parks, ranger programs, outdoor activities.", false),
+    us("us-stonewall",    "Stonewall Uprising Anniversary",`${y}-06-28`,"Observance","National","Social",
+       "Marks the anniversary of the 1969 Stonewall Inn riots — the spark for LGBTQ+ rights.", "New York City, NY", "The Stonewall uprising began June 28, 1969; Pride Month commemorates it.", "Pride events, marches, LGBTQ+ history education.", false, ["New York"]),
+    us("us-dia-de-muertos2","Día de los Muertos Festival",`${y}-11-01`,"Festival Day","National","Cultural",
+       "The Day of the Dead — a joyful Mexican tradition honoring deceased loved ones.", "Los Angeles, San Antonio, Albuquerque, Chicago", "Over 38 million Mexican Americans celebrate this vibrant tradition.", "Ofrendas (altars), marigolds, sugar skulls, face painting, music.", false, ["California","Texas","New Mexico","Illinois"]),
+    us("us-nat-popcorn",  "National Popcorn Day",      `${y}-01-19`, "Social Day","National","Fun",
+       "Celebrating America's most popular snack food.", "USA", "Americans consume 17 billion quarts of popcorn per year.", "Eating popcorn, movie nights, popcorn recipe sharing.", false),
+    us("us-nat-nacho",    "National Nachos Day",       `${y}-11-06`, "Social Day","National","Fun",
+       "Celebrating one of America's most beloved snacks.", "USA", "Nachos were invented in 1943 in Piedras Negras, Mexico; hugely popular in the US.", "Eating nachos, restaurant specials, sports viewing parties.", false),
   ];
 }
 
