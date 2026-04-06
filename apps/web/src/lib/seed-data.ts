@@ -1994,10 +1994,628 @@ function generateYear(y: number): Festival[] {
   ];
 }
 
+// ─── Country-aware factory ────────────────────────────────────────────────────
+function makeFactory(countryCode: string) {
+  return function(
+    id: string, name: string, date: string, type: Festival["type"], scope: Festival["scope"],
+    category: Festival["category"], description: string, where: string, why: string, how: string,
+    isHoliday: boolean, regions: string[] = []
+  ): Festival {
+    const year = parseInt(date.split("-")[0], 10);
+    return {
+      id: `${id}-${countryCode.toLowerCase()}-${date}`, name, date, day: dayOf(date),
+      type, scope, category, description, where_celebrated: where, why_celebrated: why,
+      how_celebrated: how, image_url: null, is_public_holiday: isHoliday,
+      source: "supplementary", country: countryCode, regions, year,
+    };
+  };
+}
+
+// ─── nth weekday helper ───────────────────────────────────────────────────────
+// n=1 first, n=2 second … n=-1 last occurrence of weekday (0=Sun) in month (1-12)
+function nthDay(year: number, month: number, weekday: number, n: number): string {
+  if (n > 0) {
+    const first = new Date(year, month - 1, 1);
+    const offset = (weekday - first.getDay() + 7) % 7;
+    const day = 1 + offset + (n - 1) * 7;
+    return `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  } else {
+    // last occurrence
+    const last = new Date(year, month, 0); // last day of month
+    const offset = (last.getDay() - weekday + 7) % 7;
+    const day = last.getDate() - offset;
+    return `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  }
+}
+
+// ─── Easter map (reused from India data) ─────────────────────────────────────
+const easterMap: Record<number, string> = {
+  2026: "2026-04-05", 2027: "2027-03-28", 2028: "2028-04-16",
+  2029: "2029-04-01", 2030: "2030-04-21",
+};
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
+}
+
+// ─── USA festivals ────────────────────────────────────────────────────────────
+function generateUSYear(y: number): Festival[] {
+  const us = makeFactory("US");
+  const easter = easterMap[y] || easterMap[2026].replace(/^\d{4}/, String(y));
+  const goodFriday   = addDays(easter, -2);
+  const ashWednesday = addDays(easter, -46);
+  const mardiGras    = addDays(easter, -47);
+  // Variable Mondays / Sundays
+  const mlkDay        = nthDay(y, 1, 1, 3);   // 3rd Monday Jan
+  const presidentsDay = nthDay(y, 2, 1, 3);   // 3rd Monday Feb
+  const motherDay     = nthDay(y, 5, 0, 2);   // 2nd Sunday May
+  const memorialDay   = nthDay(y, 5, 1, -1);  // Last Monday May
+  const fatherDay     = nthDay(y, 6, 0, 3);   // 3rd Sunday Jun
+  const laborDay      = nthDay(y, 9, 1, 1);   // 1st Monday Sep
+  const columbusDay   = nthDay(y, 10, 1, 2);  // 2nd Monday Oct
+  const thanksgiving  = nthDay(y, 11, 4, 4);  // 4th Thursday Nov
+  const blackFriday   = addDays(thanksgiving, 1);
+  const cyberMonday   = addDays(thanksgiving, 4);
+  const dstStart      = nthDay(y, 3, 0, 2);   // 2nd Sunday Mar
+  const dstEnd        = nthDay(y, 11, 0, 1);  // 1st Sunday Nov
+  const superBowl     = nthDay(y, 2, 0, 1);   // approx 1st Sunday Feb (varies)
+  const natDonutDay   = nthDay(y, 6, 5, 1);   // 1st Friday Jun
+  const natIceCreamDay= nthDay(y, 7, 0, 3);   // 3rd Sunday Jul
+  const natParentsDay = nthDay(y, 7, 0, 4);   // 4th Sunday Jul
+  const natFriendDay  = nthDay(y, 8, 0, 1);   // 1st Sunday Aug
+  const natVoterRegDay= nthDay(y, 9, 2, 4);   // 4th Tuesday Sep
+  const worldSeries   = addDays(nthDay(y, 10, 5, -1), 0); // late Oct approx last Fri
+  const kentuckyDerby = nthDay(y, 5, 6, 1);   // 1st Saturday May
+  const indyStart     = nthDay(y, 5, 0, -1);  // last Sunday May (Memorial weekend)
+  const metGala       = nthDay(y, 5, 1, 1);   // 1st Monday May (approx)
+  const natBossDay    = `${y}-10-16`;
+  const natNursesDay  = `${y}-05-06`;
+  const natTeachersDay= nthDay(y, 5, 2, 1);   // 1st Tuesday May (approx)
+
+  // Hanukkah (varies; pre-computed)
+  const hanukkahMap: Record<number, string> = {
+    2026: `${y}-12-04`, 2027: `${y}-12-24`, 2028: `${y}-12-12`,
+    2029: `${y}-12-01`, 2030: `${y}-12-20`,
+  };
+  const hanukkah = hanukkahMap[y] || hanukkahMap[2026].replace(/^\d{4}/, String(y));
+
+  // Rosh Hashanah (varies)
+  const roshHashanahMap: Record<number, string> = {
+    2026: `${y}-09-11`, 2027: `${y}-10-01`, 2028: `${y}-09-20`,
+    2029: `${y}-09-09`, 2030: `${y}-09-27`,
+  };
+  const roshHashanah = roshHashanahMap[y] || roshHashanahMap[2026].replace(/^\d{4}/, String(y));
+  const yomKippur = addDays(roshHashanah, 9);
+
+  return [
+    // ── January ──
+    us("us-newyear",     "New Year's Day",            `${y}-01-01`, "Festival Day", "National", "Cultural",
+       "The first day of the year, celebrated with fireworks and parties.", "USA", "Marks the beginning of the Gregorian calendar year.", "Fireworks, parties, Times Square ball drop, resolutions.", true),
+    us("us-mlk",         "Martin Luther King Jr. Day", mlkDay,       "Observance",   "National", "Social",
+       "A federal holiday honoring civil rights leader Dr. Martin Luther King Jr.", "USA", "Celebrates Dr. King's legacy of equality and justice.", "Community service, marches, speeches, educational events.", true),
+    us("us-inauguration", "Inauguration Day",          `${y}-01-20`, "Observance",   "National", "Political",
+       "Presidential Inauguration Day held every four years (2025, 2029...).", "Washington D.C.", "Marks the swearing-in of the U.S. President.", "Oath of office ceremony, inaugural parade, balls.", false),
+    us("us-groundhog",   "Groundhog Day",              `${y}-02-02`, "Social Day",   "National", "Fun",
+       "Tradition of predicting six more weeks of winter based on a groundhog's shadow.", "Punxsutawney, Pennsylvania", "Pennsylvania German tradition brought by immigrants.", "Watching Punxsutawney Phil emerge; media coverage.", false),
+    us("us-natblooddonor","National Blood Donor Month", `${y}-01-01`, "Observance",  "National", "Health",
+       "Awareness month encouraging Americans to donate blood.", "USA", "Addresses winter blood shortage needs.", "Blood drives, donation campaigns.", false),
+    us("us-natmentoring", "National Mentoring Month",   `${y}-01-01`, "Observance",  "National", "Social",
+       "Month dedicated to mentoring youth and young adults.", "USA", "Promotes mentoring relationships for youth development.", "Mentoring events, volunteer sign-ups.", false),
+    us("us-holocaust",   "Holocaust Remembrance Day",  `${y}-01-27`, "Observance",   "Global",   "Social",
+       "International Holocaust Remembrance Day, marking liberation of Auschwitz.", "USA & worldwide", "Honors victims of the Holocaust.", "Memorials, candlelight vigils, educational programs.", false),
+    us("us-natcompl",    "National Compliment Day",    `${y}-01-24`, "Social Day",   "National", "Fun",
+       "A day to give genuine compliments to friends, family, and strangers.", "USA", "Promotes kindness and positivity.", "Give compliments freely throughout the day.", false),
+
+    // ── February ──
+    us("us-blackhistory","Black History Month",        `${y}-02-01`, "Observance",   "National", "Cultural",
+       "Month-long celebration of African American history, culture, and achievements.", "USA", "Initiated by historian Carter G. Woodson in 1926.", "Events, exhibits, educational programs, media coverage.", false),
+    us("us-hearthealthy","American Heart Month",       `${y}-02-01`, "Observance",   "National", "Health",
+       "Raises awareness about cardiovascular disease and heart-healthy living.", "USA", "Heart disease is the leading cause of death in the USA.", "Wear Red Day, screenings, heart health campaigns.", false),
+    us("us-superbowl",   "Super Bowl Sunday",          superBowl,    "Social Day",   "National", "Fun",
+       "The NFL championship game — America's biggest annual sporting event.", "USA", "The final game of the NFL season, watched by ~100M Americans.", "Watch parties, food, halftime show, commercials.", false),
+    us("us-groundhogd",  "Groundhog Day",              `${y}-02-02`, "Social Day",   "National", "Fun",
+       "Punxsutawney Phil predicts the weather.", "Punxsutawney, PA", "German-American tradition.", "Watching Phil emerge at sunrise.", false),
+    us("us-valentines",  "Valentine's Day",            `${y}-02-14`, "Social Day",   "Global",   "Cultural",
+       "A day celebrating love and romance.", "USA & worldwide", "Named after Saint Valentine, patron saint of lovers.", "Exchanging cards, flowers, chocolates; romantic dinners.", false),
+    us("us-nationalpizza","National Pizza Day",         `${y}-02-09`, "Social Day",   "National", "Fun",
+       "A day to celebrate America's favorite food — pizza.", "USA", "Pizza is consumed at over 3 billion slices per year in the US.", "Eating pizza, pizza deals, pizza-making at home.", false),
+    us("us-presidentsday","Presidents' Day",            presidentsDay,"Festival Day", "National", "Cultural",
+       "Honors all U.S. presidents, especially Washington and Lincoln.", "USA", "Originally celebrated Washington's birthday (Feb 22).", "Sales, parades, school programs.", true),
+    us("us-ashwed",      "Ash Wednesday",              ashWednesday, "Observance",   "National", "Religious",
+       "First day of Lent, 46 days before Easter.", "USA", "Christian tradition of repentance and fasting.", "Church services, ash crosses on forehead.", false),
+    us("us-mardigras",   "Mardi Gras",                 mardiGras,    "Festival Day", "Regional", "Cultural",
+       "Fat Tuesday — the culmination of Carnival season before Lent.", "New Orleans, Louisiana", "French Catholic tradition brought to Louisiana.", "Parades, beads, costumes, king cake, music.", false, ["Louisiana", "Alabama", "Mississippi"]),
+    us("us-grammys",     "Grammy Awards",              `${y}-02-05`, "Social Day",   "National", "Cultural",
+       "The Recording Academy's annual music awards ceremony.", "Los Angeles, CA", "Recognizes outstanding achievements in the music industry.", "TV viewing parties, red carpet fashion.", false),
+
+    // ── March ──
+    us("us-womenshistory","Women's History Month",     `${y}-03-01`, "Observance",   "National", "Social",
+       "Month celebrating women's contributions to history, culture, and society.", "USA", "Designated by Congress in 1987 to honor women's achievements.", "Events, exhibits, school programs, social media campaigns.", false),
+    us("us-natnutrition","National Nutrition Month",   `${y}-03-01`, "Observance",   "National", "Health",
+       "Campaign to promote healthy eating and nutrition.", "USA", "Sponsored by the Academy of Nutrition and Dietetics.", "Nutrition education events, healthy eating challenges.", false),
+    us("us-sxsw",        "SXSW Festival Begins",       `${y}-03-08`, "Festival Day", "Regional", "Cultural",
+       "South by Southwest — a massive festival of film, music, and interactive media.", "Austin, Texas", "Started in 1987 as a music festival, now covers tech, film, and culture.", "Concerts, panels, film screenings, networking.", false, ["Texas"]),
+    us("us-womensday",   "International Women's Day",  `${y}-03-08`, "Observance",   "Global",   "Social",
+       "Global day celebrating women's social, economic, cultural, and political achievements.", "USA & worldwide", "Marks the movement for women's rights.", "Rallies, events, social media campaigns, #IWD.", false),
+    us("us-piday",       "Pi Day",                     `${y}-03-14`, "Social Day",   "National", "Fun",
+       "Annual celebration of the mathematical constant π (3.14159…).", "USA", "Date matches the first digits of pi: 3/14.", "Eating pie, math activities, pi recitation contests.", false),
+    us("us-stpattys",    "St. Patrick's Day",           `${y}-03-17`, "Festival Day", "National", "Cultural",
+       "Irish-American cultural celebration honoring Saint Patrick.", "USA (especially Boston, NYC, Chicago)", "Irish immigrants brought the tradition to America.", "Parades, green beer, shamrocks, wearing green.", false),
+    us("us-springequinox","Spring Equinox",             `${y}-03-20`, "Observance",  "Global",   "Environmental",
+       "The first day of astronomical spring — equal day and night.", "USA & worldwide", "Marks the sun crossing the celestial equator.", "Gardening, outdoor activities, seasonal celebrations.", false),
+    us("us-dststart",    "Daylight Saving Time Begins", dstStart,    "Observance",   "National", "Cultural",
+       "Clocks spring forward one hour at 2 AM.", "USA", "Adopted to maximize daylight during evening hours.", "Set clocks forward; adjust routines.", false),
+    us("us-cesarechavez","César Chávez Day",            `${y}-03-31`, "Observance",  "National", "Social",
+       "Honors civil rights activist and labor leader César Chávez.", "USA (federal observance)", "Celebrates his advocacy for farmworkers' rights.", "Community service, marches, educational events.", false),
+    us("us-aprilfools",  "April Fools' Day",            `${y}-04-01`, "Social Day",  "National", "Fun",
+       "A day for pranks, jokes, and hoaxes.", "USA", "Long tradition of humor and trickery on April 1.", "Playing pranks, social media jokes, office humor.", false),
+
+    // ── April ──
+    us("us-ncaafinale",  "NCAA March Madness Finals",  `${y}-04-07`, "Social Day",   "National", "Fun",
+       "College basketball's national championship game.", "USA", "The culmination of the 68-team NCAA tournament.", "Watch parties, brackets, sports bars.", false),
+    us("us-autism",      "Autism Awareness Month",     `${y}-04-01`, "Observance",   "National", "Health",
+       "Raises awareness and acceptance for autism spectrum disorder.", "USA", "Promotes inclusion and support for autistic individuals.", "Light it Up Blue, fundraising, educational events.", false),
+    us("us-sexualassault","Sexual Assault Awareness Month", `${y}-04-01`, "Observance","National","Social",
+       "Raises awareness about sexual violence and its prevention.", "USA", "Promotes prevention education and survivor support.", "Teal ribbon, campus events, community walks.", false),
+    us("us-poetry",      "National Poetry Month",      `${y}-04-01`, "Observance",   "National", "Cultural",
+       "Month celebrating poetry and its vital place in culture.", "USA", "Established by the Academy of American Poets in 1996.", "Poetry readings, poem-a-day programs, workshops.", false),
+    us("us-goodfriday",  "Good Friday",                goodFriday,   "Observance",   "National", "Religious",
+       "Christian commemoration of Jesus Christ's crucifixion.", "USA", "The Friday before Easter Sunday.", "Church services, fasting, quiet reflection.", false),
+    us("us-easter",      "Easter Sunday",              easter,       "Festival Day", "National", "Religious",
+       "Christian celebration of the resurrection of Jesus Christ.", "USA", "The most important Christian festival.", "Egg hunts, church services, family gatherings, ham dinner.", false),
+    us("us-taxday",      "Tax Day",                    `${y}-04-15`, "Observance",   "National", "Political",
+       "Federal income tax filing deadline for most Americans.", "USA", "The IRS requires annual tax returns by this date.", "Filing taxes, visiting accountants, last-minute rushes.", false),
+    us("us-natsiblingsday","National Siblings Day",    `${y}-04-10`, "Social Day",   "National", "Fun",
+       "A day to celebrate and appreciate brothers and sisters.", "USA", "Founded by Claudia Evart to honor her siblings.", "Social media posts, spending time with siblings.", false),
+    us("us-natpetday",   "National Pet Day",           `${y}-04-11`, "Social Day",   "National", "Fun",
+       "A day to appreciate your pets and promote animal adoption.", "USA", "Founded to celebrate pets of all kinds.", "Pet photos, adoption events, pet treats.", false),
+    us("us-earthday",    "Earth Day",                  `${y}-04-22`, "Observance",   "Global",   "Environmental",
+       "Annual event celebrating environmental protection and awareness.", "USA & worldwide", "First held April 22, 1970, it sparked modern environmentalism.", "Cleanups, tree planting, marches, recycling events.", false),
+    us("us-nfldraft",    "NFL Draft",                  `${y}-04-25`, "Social Day",   "National", "Fun",
+       "The NFL's annual player selection event.", "USA (varies by city)", "Teams select college football players for the next season.", "Watching draft picks, mock draft analysis.", false),
+    us("us-administrativeday","Administrative Professionals Day", `${y}-04-23`, "Observance","National","Social",
+       "Celebrates office workers, secretaries, and administrative staff.", "USA", "Recognizes essential contributions of administrative professionals.", "Cards, gifts, lunch for office staff.", false),
+
+    // ── May ──
+    us("us-maymonth-mh", "Mental Health Awareness Month", `${y}-05-01`, "Observance","National","Health",
+       "Month raising awareness about mental health and reducing stigma.", "USA", "Over 50 million Americans experience mental illness annually.", "Events, #MentalHealthMonth, walks, open conversations.", false),
+    us("us-aapihm",      "Asian Pacific American Heritage Month", `${y}-05-01`, "Observance","National","Cultural",
+       "Celebrates contributions of Asian Americans and Pacific Islanders.", "USA", "Designated by Congress in 1992.", "Cultural festivals, exhibits, community events.", false),
+    us("us-milappreciation","Military Appreciation Month", `${y}-05-01`, "Observance","National","Political",
+       "Month honoring the men and women who serve in the U.S. military.", "USA", "Recognizes sacrifice and service of military members.", "Veterans events, blue star banners, discounts for military.", false),
+    us("us-starwars",    "Star Wars Day",              `${y}-05-04`, "Social Day",   "National", "Fun",
+       "Celebrated on May the Fourth — \"May the Fourth Be With You\".", "USA & worldwide", "Fan-created holiday celebrating the Star Wars franchise.", "Watching Star Wars films, cosplay, fan events.", false),
+    us("us-cincodemayo", "Cinco de Mayo",              `${y}-05-05`, "Festival Day", "National", "Cultural",
+       "Celebration of Mexican-American culture and heritage.", "USA (especially Southwest)", "Commemorates Mexico's victory over France at Battle of Puebla (1862).", "Mariachi music, Mexican food, parades, festivals.", false),
+    us("us-nursesday",   "National Nurses Day",        natNursesDay, "Observance",   "National", "Health",
+       "First day of National Nurses Week — honoring nurses' contributions.", "USA", "Recognizes the critical role of nurses in healthcare.", "Hospital events, thank-you cards, media recognition.", false),
+    us("us-mothersday",  "Mother's Day",               motherDay,    "Festival Day", "National", "Cultural",
+       "Day to honor and celebrate mothers and motherhood.", "USA", "Established by Anna Jarvis in 1908; became federal holiday in 1914.", "Gifts, flowers, brunches, family visits.", false),
+    us("us-teachersday", "National Teachers Day",      natTeachersDay,"Observance",  "National", "Social",
+       "Part of Teacher Appreciation Week — honors educators nationwide.", "USA", "Recognizes teachers' vital role in society.", "Gifts for teachers, school events, social media tributes.", false),
+    us("us-kentuckyderby","Kentucky Derby",            kentuckyDerby,"Social Day",   "National", "Fun",
+       "The most famous horse race in America — \"The Greatest Two Minutes in Sports\".", "Churchill Downs, Louisville, KY", "First held in 1875, the Kentucky Derby is part of horse racing's Triple Crown.", "Watching the race, wearing hats, mint juleps.", false, ["Kentucky"]),
+    us("us-metgala",     "Met Gala",                   metGala,      "Social Day",   "National", "Cultural",
+       "Annual fundraising gala for the Metropolitan Museum of Art's Costume Institute.", "New York City", "The biggest night in fashion — celebrities wear elaborate themed costumes.", "Watching red carpet arrivals, fashion commentary.", false, ["New York"]),
+    us("us-indy500",     "Indianapolis 500",           indyStart,    "Social Day",   "National", "Fun",
+       "One of the world's most prestigious auto races.", "Indianapolis Motor Speedway, Indiana", "First held in 1911 on Memorial Day weekend.", "Watching the race, 'Back Home Again in Indiana' tradition.", false, ["Indiana"]),
+    us("us-memorialday", "Memorial Day",               memorialDay,  "Festival Day", "National", "Cultural",
+       "Federal holiday honoring military personnel who died in service.", "USA", "Originated after the Civil War to honor fallen soldiers.", "Parades, memorial services, visiting graves, BBQs.", true),
+    us("us-natdonutday", "National Donut Day",         natDonutDay,  "Social Day",   "National", "Fun",
+       "Celebrates donuts and honors Salvation Army Donut Lassies of WWII.", "USA", "Started in 1938 by Salvation Army to raise money.", "Donut giveaways, eating donuts, bakery deals.", false),
+
+    // ── June ──
+    us("us-pride",       "LGBTQ+ Pride Month",         `${y}-06-01`, "Observance",  "National", "Social",
+       "Month-long celebration of LGBTQ+ identities, rights, and culture.", "USA", "Marks the anniversary of the Stonewall Riots (June 1969).", "Pride parades, festivals, rainbow flags, events.", false),
+    us("us-caribheritage","Caribbean American Heritage Month", `${y}-06-01`, "Observance","National","Cultural",
+       "Celebrates contributions of Caribbean Americans.", "USA", "Recognized by Congress in 2006.", "Cultural festivals, music, food events.", false),
+    us("us-flagday",     "Flag Day",                   `${y}-06-14`, "Observance",  "National", "Political",
+       "Celebrates the adoption of the American flag on June 14, 1777.", "USA", "The Continental Congress adopted the Stars and Stripes in 1777.", "Flag displays, ceremonies, parades.", false),
+    us("us-fathersday",  "Father's Day",               fatherDay,    "Festival Day", "National", "Cultural",
+       "Day to honor and celebrate fathers and fatherhood.", "USA", "Inspired by Mother's Day; became federal holiday in 1972.", "Gifts, cards, BBQs, family gatherings.", false),
+    us("us-juneteenth",  "Juneteenth",                 `${y}-06-19`, "Festival Day", "National", "Cultural",
+       "Federal holiday commemorating the emancipation of enslaved African Americans.", "USA", "June 19, 1865 — enslaved people in Texas learned of their freedom.", "Festivals, music, food, community celebrations, reflection.", true),
+    us("us-summersolstice","Summer Solstice",           `${y}-06-21`, "Observance",  "Global",   "Environmental",
+       "The longest day of the year — start of astronomical summer.", "USA & worldwide", "The sun reaches its highest position in the sky.", "Outdoor festivals, Stonehenge gatherings, nature activities.", false),
+    us("us-nbaseasonfinals","NBA Finals Begin",        `${y}-06-05`, "Social Day",  "National", "Fun",
+       "The NBA championship series between the Eastern and Western Conference champions.", "USA", "The pinnacle of professional basketball in North America.", "Watch parties, sports bars, jersey-wearing.", false),
+
+    // ── July ──
+    us("us-independence", "Independence Day",          `${y}-07-04`, "Festival Day", "National", "Cultural",
+       "Celebrates the Declaration of Independence, adopted July 4, 1776.", "USA", "The colonies declared independence from British rule.", "Fireworks, parades, BBQs, patriotic events.", true),
+    us("us-naticecreamday","National Ice Cream Day",   natIceCreamDay,"Social Day",  "National", "Fun",
+       "Celebrates one of America's favorite desserts.", "USA", "Proclaimed by President Reagan in 1984.", "Ice cream socials, free scoops, sundae parties.", false),
+    us("us-natparksmonth","National Park Month",       `${y}-07-01`, "Observance",  "National", "Environmental",
+       "Celebrates America's 63 national parks.", "USA", "National parks protect iconic landscapes.", "Visiting national parks, ranger programs, hiking.", false),
+    us("us-natparentsday","National Parents Day",      natParentsDay, "Observance",  "National", "Social",
+       "Honors parents and their contributions to families.", "USA", "Signed into law by President Clinton in 1994.", "Family gatherings, appreciation posts.", false),
+    us("us-friendshipday","National Friendship Day",   natFriendDay,  "Social Day",  "National", "Fun",
+       "Celebrates friendships and the bonds between people.", "USA", "A day to show appreciation for your friends.", "Spending time with friends, social media posts.", false),
+
+    // ── August ──
+    us("us-natliteracy",  "National Literacy Month",   `${y}-08-01`, "Observance",  "National", "Social",
+       "Month promoting reading and literacy across all ages.", "USA", "Supports the 32 million American adults who can't read well.", "Reading programs, library events, book drives.", false),
+    us("us-natdogday",    "National Dog Day",           `${y}-08-26`, "Social Day",  "National", "Fun",
+       "Celebrates dogs and promotes adoption from shelters.", "USA", "Founded in 2004 to celebrate dogs of all breeds.", "Dog photos, shelter adoptions, dog events.", false),
+    us("us-womensequalityday","Women's Equality Day",  `${y}-08-26`, "Observance",  "National", "Social",
+       "Marks the ratification of the 19th Amendment granting women's suffrage.", "USA", "August 26, 1920 — women gained the right to vote.", "Rallies, speeches, social media campaigns.", false),
+    us("us-backtoschool", "Back to School Season",     `${y}-08-15`, "Observance",  "National", "Cultural",
+       "The period when students across America return to school.", "USA", "Late summer school start is a major cultural and retail event.", "Shopping for supplies, new schedules, school events.", false),
+    us("us-burningman",   "Burning Man",               `${y}-08-25`, "Festival Day", "Regional", "Cultural",
+       "Annual arts and community event in the Nevada desert.", "Black Rock Desert, Nevada", "Started in 1986 as a small beach bonfire; now draws 70,000+ people.", "Art installations, themed camps, communal dining, the Burn.", false, ["Nevada"]),
+    us("us-usopen-tennis","US Open Tennis Begins",     `${y}-08-26`, "Social Day",  "National", "Fun",
+       "The final Grand Slam of the tennis season.", "USTA Billie Jean King Center, NYC", "One of the four Grand Slam tournaments.", "Watching matches, visiting Flushing Meadows.", false, ["New York"]),
+
+    // ── September ──
+    us("us-laborday",    "Labor Day",                  laborDay,     "Festival Day", "National", "Cultural",
+       "Federal holiday honoring American workers and the labor movement.", "USA", "First held in 1882; became federal holiday in 1894.", "BBQs, parades, end-of-summer celebrations.", true),
+    us("us-hispanicmonth","Hispanic Heritage Month",   `${y}-09-15`, "Observance",  "National", "Cultural",
+       "Month celebrating history, culture, and contributions of Hispanic Americans.", "USA", "Runs September 15 to October 15, spanning multiple independence days.", "Festivals, art exhibits, concerts, community events.", false),
+    us("us-patriotday",  "Patriot Day (9/11)",         `${y}-09-11`, "Observance",  "National", "Political",
+       "Remembrance of the September 11, 2001 terrorist attacks.", "USA", "Honors the nearly 3,000 people killed in the attacks.", "Memorials, flag displays, moment of silence.", false),
+    us("us-natcoffeeday","National Coffee Day",        `${y}-09-29`, "Social Day",  "National", "Fun",
+       "A day to celebrate the world's most popular beverage.", "USA", "Coffee is America's most consumed beverage.", "Free coffee offers, coffeehouse visits, home brewing.", false),
+    us("us-constitutionday","Constitution Day",        `${y}-09-17`, "Observance",  "National", "Political",
+       "Marks the signing of the U.S. Constitution on September 17, 1787.", "USA", "The Constitution is the supreme law of the United States.", "Educational programs, museum events, Constitution readings.", false),
+    us("us-natvoterregday","National Voter Registration Day", natVoterRegDay,"Observance","National","Political",
+       "Nonpartisan holiday encouraging Americans to register to vote.", "USA", "Ensures eligible citizens can participate in elections.", "Registration drives, online registration campaigns.", false),
+    us("us-autumnequinox","Autumn Equinox",            `${y}-09-22`, "Observance",  "Global",   "Environmental",
+       "First day of astronomical fall — equal day and night.", "USA & worldwide", "Marks the sun crossing the celestial equator southward.", "Harvest festivals, apple picking, pumpkin patches.", false),
+
+    // ── October ──
+    us("us-breastcancer","Breast Cancer Awareness Month", `${y}-10-01`, "Observance","National","Health",
+       "Month dedicated to raising awareness and funds for breast cancer research.", "USA", "Breast cancer is the most common cancer among American women.", "Pink ribbons, fundraising walks, mammogram campaigns.", false),
+    us("us-lgbthistory", "LGBTQ+ History Month",       `${y}-10-01`, "Observance",  "National", "Cultural",
+       "Month celebrating LGBTQ+ history and the civil rights movement.", "USA", "Established in 1994 by Missouri teacher Rodney Wilson.", "Educational events, cultural programs.", false),
+    us("us-nativeheritage","Native American Heritage Month", `${y}-10-01`, "Observance","National","Cultural",
+       "Month honoring Native American history, culture, and contributions.", "USA", "Recognizes the rich culture and traditions of Indigenous peoples.", "Cultural events, storytelling, art exhibits.", false, ["National"]),
+    us("us-columbusday", "Indigenous Peoples' Day",    columbusDay,  "Observance",  "National", "Cultural",
+       "Federal holiday — many cities celebrate Indigenous peoples instead of Columbus.", "USA", "Rethinks the legacy of Columbus and honors Native Americans.", "Indigenous cultural events, community gatherings.", true),
+    us("us-nattacoday", "National Taco Day",           `${y}-10-04`, "Social Day",  "National", "Fun",
+       "A day celebrating everyone's favorite Mexican-inspired food.", "USA", "Tacos are among America's most popular foods.", "Taco eating, restaurant specials, taco-making at home.", false),
+    us("us-natcominout","National Coming Out Day",     `${y}-10-11`, "Observance",  "National", "Social",
+       "Encourages LGBTQ+ people to come out to friends and family if safe to do so.", "USA", "Marks the 1987 National March on Washington for Lesbian and Gay Rights.", "Community events, social media posts, support programs.", false),
+    us("us-natchocday",  "National Chocolate Day",     `${y}-10-28`, "Social Day",  "National", "Fun",
+       "A day to indulge in all things chocolate.", "USA", "Chocolate is America's favorite flavor.", "Eating chocolate, bakery specials, chocolate tasting events.", false),
+    us("us-halloween",   "Halloween",                  `${y}-10-31`, "Festival Day", "National", "Cultural",
+       "Annual celebration of costumes, candy, and spooky fun.", "USA", "Celtic festival of Samhain adopted into American culture.", "Trick-or-treating, haunted houses, costume parties, carving pumpkins.", false),
+    us("us-natbossday",  "National Boss Day",          natBossDay,   "Observance",  "National", "Social",
+       "A day to appreciate and recognize bosses and managers.", "USA", "Started in 1958 by Patricia Bays Haroski.", "Cards, gifts for bosses, office celebrations.", false),
+    us("us-worldseries", "World Series Begins",        worldSeries,  "Social Day",  "National", "Fun",
+       "Major League Baseball's championship series.", "USA", "The championship between American and National League champions.", "Watch parties, sports bars, stadium events.", false),
+
+    // ── November ──
+    us("us-nativeheritage2","National Native American Heritage Month", `${y}-11-01`,"Observance","National","Cultural",
+       "Month celebrating Indigenous peoples' rich heritage.", "USA", "Recognizes the resilience and culture of Native Americans.", "Powwows, storytelling, art exhibits, education.", false),
+    us("us-diabetesmonth","American Diabetes Month",  `${y}-11-01`, "Observance",  "National", "Health",
+       "Raises awareness about diabetes prevention and management.", "USA", "Over 37 million Americans live with diabetes.", "Screenings, fundraising, #DiabetesMonth campaigns.", false),
+    us("us-movember",    "Movember",                   `${y}-11-01`, "Observance",  "National", "Health",
+       "Month raising awareness for men's health, including prostate cancer.", "USA & worldwide", "Men grow mustaches to raise money and awareness.", "Growing moustaches, fundraising, health screenings.", false),
+    us("us-veteransday", "Veterans Day",               `${y}-11-11`, "Festival Day", "National", "Political",
+       "Federal holiday honoring all military veterans.", "USA", "Originally Armistice Day, marking end of WWI in 1918.", "Parades, ceremonies, discounts for veterans, flag displays.", true),
+    us("us-thanksgiving","Thanksgiving",               thanksgiving, "Festival Day", "National", "Cultural",
+       "Annual harvest festival celebrating gratitude and family.", "USA", "Originated with 1621 feast between Pilgrims and Wampanoag people.", "Turkey dinner, family gatherings, the Macy's Thanksgiving Day Parade.", true),
+    us("us-macysparade", "Macy's Thanksgiving Day Parade", thanksgiving, "Social Day","National","Cultural",
+       "New York City's iconic holiday parade with giant balloons and floats.", "New York City", "Started by Macy's employees in 1924.", "Watching the parade on TV, attending in NYC.", false, ["New York"]),
+    us("us-blackfriday", "Black Friday",              blackFriday,   "Social Day",  "National", "Cultural",
+       "The biggest shopping day of the year — massive retail sales.", "USA", "The day after Thanksgiving; marks start of holiday shopping season.", "Shopping, doorbuster deals, online and in-store sales.", false),
+    us("us-cybermonday", "Cyber Monday",              cyberMonday,   "Social Day",  "National", "Cultural",
+       "Online shopping event with massive discounts.", "USA", "Coined in 2005 to encourage online shopping after Thanksgiving.", "Online shopping, discount codes, tech deals.", false),
+    us("us-smallbizsat","Small Business Saturday",   addDays(thanksgiving, 2), "Observance","National","Social",
+       "Encourages shopping at local, small businesses.", "USA", "Created by American Express in 2010.", "Shopping at local stores, #ShopSmall campaigns.", false),
+    us("us-dstend",      "Daylight Saving Time Ends", dstEnd,       "Observance",  "National", "Cultural",
+       "Clocks fall back one hour at 2 AM.", "USA", "End of daylight saving — clocks return to standard time.", "Set clocks back; enjoy an extra hour of sleep.", false),
+    us("us-decchallenge","National Novel Writing Month (NaNoWriMo)", `${y}-11-01`,"Observance","National","Cultural",
+       "Month where writers aim to write a 50,000-word novel.", "USA", "Started in 1999; now involves 400,000+ participants.", "Writing, word count updates, writing groups.", false),
+
+    // ── December ──
+    us("us-hanukkah",   "Hanukkah Begins",           hanukkah,     "Festival Day", "National", "Religious",
+       "Jewish Festival of Lights — eight nights of candle lighting.", "USA", "Celebrates the miracle of oil lasting eight days in the ancient Temple.", "Lighting the menorah, dreidel, latkes, gelt.", false),
+    us("us-hiv-aids",   "World AIDS Day",             `${y}-12-01`, "Observance",  "Global",   "Health",
+       "International day raising awareness about HIV/AIDS.", "USA & worldwide", "Since 1988, World AIDS Day unites people against HIV.", "Red ribbons, testing campaigns, community events.", false),
+    us("us-givingtuesday","Giving Tuesday",           addDays(thanksgiving, 5), "Observance","National","Social",
+       "Global generosity day encouraging charitable giving.", "USA", "Started in 2012; over $2.7 billion raised in one day.", "Donating to charities, volunteering, social media campaigns.", false),
+    us("us-pearlharbor", "Pearl Harbor Remembrance Day", `${y}-12-07`, "Observance","National","Political",
+       "Honors the 2,403 Americans killed in the 1941 attack on Pearl Harbor.", "USA", "The attack brought the US into World War II.", "Flag flown at half-staff, memorial ceremonies.", false),
+    us("us-wintersolstice","Winter Solstice",          `${y}-12-21`, "Observance", "Global",   "Environmental",
+       "The shortest day of the year — start of astronomical winter.", "USA & worldwide", "Marks the sun at its southernmost point.", "Winter festivals, bonfires, seasonal celebrations.", false),
+    us("us-christmaseve","Christmas Eve",             `${y}-12-24`, "Festival Day", "National", "Religious",
+       "The evening before Christmas Day.", "USA", "Traditional night of anticipation before Christmas.", "Church services, family gatherings, gift opening traditions.", false),
+    us("us-christmas",  "Christmas Day",              `${y}-12-25`, "Festival Day", "National", "Religious",
+       "Celebrates the birth of Jesus Christ; a major cultural holiday.", "USA", "Christianity's celebration of Christ's birth.", "Gift giving, family gatherings, Christmas dinner, church.", true),
+    us("us-kwanzaa",    "Kwanzaa",                   `${y}-12-26`, "Festival Day", "National", "Cultural",
+       "Week-long celebration honoring African American heritage and culture.", "USA", "Created in 1966 by Maulana Karenga to reconnect African Americans with African roots.", "Lighting the kinara, gift giving, feasting, community gatherings.", false),
+    us("us-newyearseve","New Year's Eve",             `${y}-12-31`, "Social Day",  "National", "Cultural",
+       "The last day of the year — celebrated with countdowns and fireworks.", "USA", "Times Square ball drop has been a tradition since 1907.", "Parties, fireworks, Times Square ball drop, champagne toasts.", false),
+    us("us-rosh-hashanah","Rosh Hashanah",           roshHashanah, "Festival Day", "National", "Religious",
+       "The Jewish New Year — a time of prayer, reflection, and renewal.", "USA", "Marks the beginning of the High Holy Days.", "Synagogue services, apples and honey, round challah.", false),
+    us("us-yomkippur",  "Yom Kippur",                yomKippur,    "Observance",  "National", "Religious",
+       "The Jewish Day of Atonement — the holiest day of the Jewish year.", "USA", "A day of fasting, prayer, and repentance.", "Fasting, synagogue services, wearing white, reflection.", false),
+    us("us-bostonmarathon","Boston Marathon",         `${y}-04-21`, "Social Day",  "National", "Fun",
+       "The world's oldest annual marathon, held on Patriots' Day.", "Boston, Massachusetts", "First run in 1897, inspired by the Olympic marathon.", "Running, watching, spectating along Boylston Street.", false, ["Massachusetts"]),
+    us("us-coachella",  "Coachella Valley Music & Arts Festival", `${y}-04-12`, "Festival Day","Regional","Cultural",
+       "One of the largest and most famous music festivals in the world.", "Indio, California", "Started in 1999, featuring art installations and top musical acts.", "Concerts, fashion, art, camping.", false, ["California"]),
+    us("us-natcheeseday","National Cheese Day",      `${y}-06-04`, "Social Day",  "National", "Fun",
+       "Celebrates one of America's most loved foods.", "USA", "Americans consume 40+ pounds of cheese per person per year.", "Cheese tastings, charcuterie boards, dairy events.", false),
+    us("us-natchocolateday","National Chocolate Chip Cookie Day", `${y}-08-04`, "Social Day","National","Fun",
+       "Celebrates the invention of the chocolate chip cookie.", "USA", "Ruth Wakefield invented chocolate chip cookies at the Toll House Inn in 1938.", "Baking cookies, cookie swaps.", false),
+    us("us-nathotdogday","National Hot Dog Day",     `${y}-07-23`, "Social Day",  "National", "Fun",
+       "Celebrates America's favorite summer food.", "USA", "Americans eat around 20 billion hot dogs per year.", "Hot dog eating, cookouts, summer BBQs.", false),
+    us("us-rosebowl",   "Rose Bowl Parade",          `${y}-01-01`, "Festival Day", "Regional", "Cultural",
+       "The Tournament of Roses Parade on New Year's Day in Pasadena.", "Pasadena, California", "Started in 1890; features elaborate floral floats.", "Watching the parade, attending in person.", false, ["California"]),
+    us("us-oscarscermony","Academy Awards (Oscars)", `${y}-03-02`, "Social Day",  "National", "Cultural",
+       "The most prestigious awards ceremony in the film industry.", "Los Angeles, California", "The Academy of Motion Picture Arts and Sciences has awarded Oscars since 1929.", "Award show viewing parties, fashion, red carpet.", false, ["California"]),
+    us("us-natcatday",  "National Cat Day",           `${y}-10-29`, "Social Day",  "National", "Fun",
+       "Celebrates cats and promotes cat adoption.", "USA", "Founded in 2005 by pet lifestyle expert Colleen Paige.", "Cat photos, adoption events, cat toys.", false),
+    us("us-worldserialbrand","MLB All-Star Game",    `${y}-07-15`, "Social Day",  "National", "Fun",
+       "Major League Baseball's annual exhibition game between AL and NL stars.", "USA (varies by city)", "The Midsummer Classic has been held since 1933.", "Watching the game, Home Run Derby.", false),
+    us("us-natgrandfathers","National Grandparents Day", nthDay(y,9,0,1), "Observance","National","Social",
+       "Honors grandparents and the wisdom they share.", "USA", "Proclaimed by President Carter in 1978.", "Visits with grandparents, cards, family meals.", false),
+    us("us-dayofthedead", "Día de los Muertos",       `${y}-11-02`, "Festival Day", "National", "Cultural",
+       "Mexican holiday honoring deceased loved ones, widely celebrated by Latino Americans.", "USA (esp. Southwest)", "Ancient Aztec tradition blended with Catholic influences.", "Ofrendas, marigolds, face paint, parades.", false, ["California","Texas","New Mexico","Arizona"]),
+    us("us-nflopener",  "NFL Season Opener",         nthDay(y,9,4,1), "Social Day","National","Fun",
+       "The start of the NFL regular season.", "USA", "The NFL regular season begins in early September.", "Watch parties, fantasy football, tailgating.", false),
+  ];
+}
+
+// ─── UK festivals ─────────────────────────────────────────────────────────────
+function generateUKYear(y: number): Festival[] {
+  const uk = makeFactory("GB");
+  const easter      = easterMap[y] || easterMap[2026].replace(/^\d{4}/, String(y));
+  const goodFriday  = addDays(easter, -2);
+  const easterMon   = addDays(easter, 1);
+  const ashWednesday= addDays(easter, -46);
+  const pancakeDay  = addDays(easter, -47);    // Shrove Tuesday
+  const motheringSun= addDays(easter, -21);    // 4th Sunday of Lent (3 weeks before Easter)
+  const mayBankHol  = nthDay(y, 5, 1, 1);     // 1st Monday May (Early May Bank Holiday)
+  const springBH    = nthDay(y, 5, 1, -1);    // Last Monday May (Spring Bank Holiday)
+  const augustBH    = nthDay(y, 8, 1, -1);    // Last Monday Aug (England/Wales)
+  const augustBHScot= nthDay(y, 8, 1, 1);     // 1st Monday Aug (Scotland)
+  const remembSun   = nthDay(y, 11, 0, 2);    // 2nd Sunday November
+  const dstStart    = nthDay(y, 3, 0, -1);    // Last Sunday March (UK clocks forward)
+  const dstEnd      = nthDay(y, 10, 0, -1);   // Last Sunday October (UK clocks back)
+  const grandNational = nthDay(y, 4, 6, 1);   // 1st Saturday April
+  const faCupFinal  = nthDay(y, 5, 6, -1);    // Last Saturday May (approx)
+  const trooping    = nthDay(y, 6, 6, 2);     // 2nd Saturday June (Trooping the Colour)
+  const royalAscotStart = nthDay(y, 6, 2, 3); // 3rd Tuesday June
+  const wimbledonStart  = nthDay(y, 6, 1, -1); // Last Monday June
+  const worldBook   = nthDay(y, 3, 4, 1);     // 1st Thursday March (UK World Book Day)
+  const chelseaFlower   = nthDay(y, 5, 2, 4); // 4th Tuesday May (approx)
+
+  // Hanukkah same as US
+  const hanukkahMap: Record<number, string> = {
+    2026: `${y}-12-04`, 2027: `${y}-12-24`, 2028: `${y}-12-12`,
+    2029: `${y}-12-01`, 2030: `${y}-12-20`,
+  };
+  const hanukkah = hanukkahMap[y] || hanukkahMap[2026].replace(/^\d{4}/, String(y));
+
+  return [
+    // ── January ──
+    uk("uk-newyear",     "New Year's Day",             `${y}-01-01`, "Festival Day", "National", "Cultural",
+       "The first day of the year.", "UK", "Marks the beginning of the Gregorian calendar year.", "Fireworks at midnight (London Eye), family gatherings, resolutions.", true),
+    uk("uk-jan2-scot",   "2nd January Bank Holiday",   `${y}-01-02`, "Observance",  "Regional", "Cultural",
+       "Scotland-specific bank holiday — extension of New Year celebrations.", "Scotland", "Hogmanay celebrations often continue into January 2.", "Extra rest day; visiting family and friends.", true, ["Scotland"]),
+    uk("uk-burnsnightscot","Burns Night",               `${y}-01-25`, "Festival Day", "Regional", "Cultural",
+       "Annual celebration of Scottish poet Robert Burns.", "Scotland (and diaspora)", "Commemorates the birthday of national poet Robert Burns (1759).", "Burns suppers with haggis, neeps and tatties, whisky, poetry recitation.", false, ["Scotland"]),
+    uk("uk-epiphany",    "Epiphany / Twelfth Night",   `${y}-01-06`, "Observance",  "National", "Religious",
+       "Christian feast day marking the visit of the Magi to the infant Jesus.", "UK", "The 12th day of Christmas.", "Removing Christmas decorations, church services.", false),
+    uk("uk-holocaust-uk","Holocaust Memorial Day",      `${y}-01-27`, "Observance",  "National", "Social",
+       "UK national day of reflection on the Holocaust and subsequent genocides.", "UK", "Marks liberation of Auschwitz on January 27, 1945.", "Vigils, school events, memorial ceremonies.", false),
+
+    // ── February ──
+    uk("uk-valentines",  "Valentine's Day",             `${y}-02-14`, "Social Day",  "Global",   "Cultural",
+       "Day celebrating love and romance.", "UK", "Named after Saint Valentine, popular in UK since Middle Ages.", "Cards, flowers, chocolates, romantic dinners.", false),
+    uk("uk-pancakeday",  "Pancake Day (Shrove Tuesday)","" + pancakeDay, "Festival Day","National","Cultural",
+       "The day before Ash Wednesday — a tradition of making and eating pancakes.", "UK", "Traditionally used up rich foods before Lent fasting.", "Making and flipping pancakes, pancake races, lemon and sugar.", false),
+    uk("uk-valentinesweek","Valentine's Week",          `${y}-02-07`, "Social Day",  "National", "Fun",
+       "The run-up to Valentine's Day including Rose Day, Propose Day, and more.", "UK", "Commercial celebration building up to Valentine's Day.", "Flowers, gifts, romantic plans.", false),
+    uk("uk-chinesenew",  "Chinese New Year",            `${y}-02-10`, "Festival Day", "National", "Cultural",
+       "Lunar New Year celebrated by Chinese communities across the UK.", "London, Manchester, Birmingham", "Major celebration for the UK's large Chinese community.", "Dragon parades, fireworks, dim sum, lantern festivals.", false, ["London","Manchester"]),
+    uk("uk-lgbt-hist",   "LGBT History Month",          `${y}-02-01`, "Observance",  "National", "Social",
+       "Month celebrating LGBT+ history and civil rights in the UK.", "UK", "Launched in 2005 in the UK — different from US Pride Month.", "Events, education programs, film screenings.", false),
+    uk("uk-heart-uk",    "National Heart Month",        `${y}-02-01`, "Observance",  "National", "Health",
+       "Raises awareness of heart disease — the UK's biggest killer.", "UK", "Supported by the British Heart Foundation.", "Wear Red events, fundraising, health checks.", false),
+    uk("uk-mental-ch",   "Children's Mental Health Week",`${y}-02-03`, "Observance", "National", "Health",
+       "Annual awareness week for children's mental health.", "UK", "Run by Place2Be charity.", "School events, #ChildrensMentalHealthWeek campaigns.", false),
+
+    // ── March ──
+    uk("uk-stdavids",    "St David's Day",              `${y}-03-01`, "Festival Day", "Regional", "Cultural",
+       "National day of Wales, celebrating the patron saint of Wales.", "Wales", "St David is the patron saint of Wales; died March 1, circa 589 AD.", "Wearing daffodils and leeks, parades, Welsh food, eisteddfods.", false, ["Wales"]),
+    uk("uk-worldbookday","World Book Day",              worldBook,    "Observance",  "National", "Cultural",
+       "UK's designated World Book Day — children dress as favourite book characters.", "UK", "Held on the 1st Thursday of March in the UK (unlike UNESCO's April 23 date).", "Dressing up, reading, £1 book tokens, school events.", false),
+    uk("uk-womensday",   "International Women's Day",   `${y}-03-08`, "Observance",  "Global",   "Social",
+       "Global day celebrating women's achievements.", "UK", "UK has celebrated IWD since early 20th century.", "Events, marches, #IWD campaigns.", false),
+    uk("uk-ashwed",      "Ash Wednesday",               "" + ashWednesday, "Observance","National","Religious",
+       "First day of Lent — 40 days of fasting before Easter.", "UK", "Christian tradition of repentance.", "Church services, receiving ash crosses.", false),
+    uk("uk-motheringsun","Mothering Sunday",            "" + motheringSun, "Festival Day","National","Cultural",
+       "UK Mother's Day — the 4th Sunday of Lent.", "UK", "Originally when people returned to their 'mother church'; now honours mothers.", "Flowers, cards, breakfast in bed, family gatherings.", false),
+    uk("uk-rednosedayuk","Red Nose Day (Comic Relief)", `${y}-03-21`, "Observance",  "National", "Social",
+       "Biennial charity event raising money for Comic Relief.", "UK", "Started in 1988; raises hundreds of millions for charity.", "Wearing red noses, comedy events, Telethon on BBC.", false),
+    uk("uk-stpatricks",  "St Patrick's Day",            `${y}-03-17`, "Festival Day", "National", "Cultural",
+       "Celebrates the patron saint of Ireland — major celebration in N. Ireland and across UK.", "Northern Ireland & UK", "St Patrick is patron saint of Ireland.", "Parades, wearing green, Irish pubs, traditional music.", false, ["Northern Ireland"]),
+    uk("uk-springequinox","Spring Equinox",             `${y}-03-20`, "Observance",  "Global",   "Environmental",
+       "First day of astronomical spring.", "UK", "The sun crosses the celestial equator.", "Stonehenge gatherings, outdoor celebrations.", false),
+    uk("uk-dststart",    "British Summer Time Begins",  "" + dstStart, "Observance", "National", "Cultural",
+       "Clocks go forward one hour — start of British Summer Time.", "UK", "UK adopted BST to maximize daylight in evenings.", "Set clocks forward, enjoy lighter evenings.", false),
+
+    // ── April ──
+    uk("uk-aprilfools",  "April Fools' Day",            `${y}-04-01`, "Social Day",  "National", "Fun",
+       "Traditional day of pranks and hoaxes.", "UK", "Long British tradition of pranking before noon.", "Playing pranks until noon, media hoaxes.", false),
+    uk("uk-goodfriday",  "Good Friday",                 "" + goodFriday, "Festival Day","National","Religious",
+       "Christian commemoration of the crucifixion of Jesus.", "UK", "The Friday before Easter Sunday.", "Church services, hot cross buns, quiet reflection.", true),
+    uk("uk-easter",      "Easter Sunday",               "" + easter,  "Festival Day", "National", "Religious",
+       "Christian celebration of the resurrection of Jesus Christ.", "UK", "The holiest day in the Christian calendar.", "Easter eggs, church services, family lunches.", false),
+    uk("uk-eastermon",   "Easter Monday",               "" + easterMon,"Festival Day","National","Cultural",
+       "Bank holiday following Easter Sunday.", "UK (exc. Scotland)", "Bank holiday extending the Easter weekend.", "Family outings, Easter activities, bank holiday rest.", true),
+    uk("uk-grandnational","Grand National",             grandNational,"Festival Day", "National", "Fun",
+       "The world's most famous horse race, held at Aintree Racecourse.", "Aintree, Liverpool", "First run in 1839; 40 horses, 30 fences, 4 miles.", "Watching the race, placing bets, wearing hats.", false, ["Merseyside"]),
+    uk("uk-stgeorge",    "St George's Day",             `${y}-04-23`, "Festival Day", "Regional", "Cultural",
+       "England's national day, celebrating the patron saint of England.", "England", "St George slew a dragon in legend; patron saint since 14th century.", "Flag of St George displays, parades, Morris dancing, English food.", false, ["England"]),
+    uk("uk-shakespeare", "Shakespeare's Birthday",      `${y}-04-23`, "Observance",  "National", "Cultural",
+       "Marks the birth of William Shakespeare (born April 23, 1564).", "Stratford-upon-Avon, Warwickshire", "Celebrates the world's greatest playwright.", "Theatre performances, events in Stratford, literary celebrations.", false, ["Warwickshire"]),
+    uk("uk-autism-uk",   "Autism Awareness Week",       `${y}-04-01`, "Observance",  "National", "Health",
+       "Annual UK awareness week for autism spectrum conditions.", "UK", "Run by the National Autistic Society.", "Blue puzzle pieces, events, fundraising.", false),
+
+    // ── May ──
+    uk("uk-maybankhol",  "Early May Bank Holiday",      mayBankHol,   "Observance",  "National", "Cultural",
+       "First bank holiday of May — a long weekend for the UK.", "UK", "A public holiday giving workers a long weekend in early May.", "Day trips, outdoor activities, bank holiday traditions.", true),
+    uk("uk-chelseaflower","Chelsea Flower Show",         chelseaFlower,"Social Day",  "Regional", "Cultural",
+       "The world's most prestigious garden show, held at the Royal Hospital Chelsea.", "Chelsea, London", "Hosted by the Royal Horticultural Society since 1913.", "Viewing show gardens, flower exhibits, plant shopping.", false, ["London"]),
+    uk("uk-mentalhealth-week","Mental Health Awareness Week",`${y}-05-13`,"Observance","National","Health",
+       "Annual UK awareness week for mental health.", "UK", "Run by the Mental Health Foundation since 2001.", "#MentalHealthAwarenessWeek, events, open conversations.", false),
+    uk("uk-faCupFinal",  "FA Cup Final",                faCupFinal,   "Social Day",  "National", "Fun",
+       "The climax of the world's oldest football cup competition.", "Wembley Stadium, London", "The FA Cup has been played since 1871.", "Watching the match, pub screenings, Wembley atmosphere.", false, ["London"]),
+    uk("uk-springbh",    "Spring Bank Holiday",         springBH,     "Observance",  "National", "Cultural",
+       "Last Monday of May bank holiday — unofficial start of summer.", "UK", "A public holiday at the end of May.", "Bank holiday weekends, travel, outdoor activities.", true),
+    uk("uk-hayfestival", "Hay Festival of Literature",  `${y}-05-22`, "Festival Day", "Regional", "Cultural",
+       "The world's leading festival of literature and arts.", "Hay-on-Wye, Wales", "Founded in 1988 by the Florence family; attracts global authors.", "Author talks, book signings, panels, debates.", false, ["Wales"]),
+    uk("uk-veday",       "VE Day",                      `${y}-05-08`, "Observance",  "National", "Political",
+       "Victory in Europe Day — marks Nazi Germany's surrender in WWII.", "UK", "May 8, 1945 — the Allied victory in Europe was announced.", "Commemorations, wreath-laying, street parties.", false),
+
+    // ── June ──
+    uk("uk-trooping",    "Trooping the Colour",         trooping,     "Festival Day", "National", "Cultural",
+       "The King's official birthday parade on Horse Guards Parade.", "London", "Tradition dating to the 17th century; celebrates the Sovereign's birthday.", "Watching the parade, RAF flypast, Buckingham Palace balcony.", false, ["London"]),
+    uk("uk-royalascot",  "Royal Ascot",                 royalAscotStart, "Social Day","National","Cultural",
+       "Five-day Royal horse racing meeting — a pinnacle of the British social calendar.", "Ascot Racecourse, Berkshire", "Held since 1711 by Queen Anne; attended by the Royal Family.", "Horse racing, elaborate hats, fashion, garden parties.", false, ["Berkshire"]),
+    uk("uk-pride-london","Pride in London",             `${y}-06-29`, "Festival Day", "Regional", "Social",
+       "One of the world's largest Pride parades.", "London", "London Pride has been held since 1972.", "Parade through central London, festivals, rainbow flags.", false, ["London"]),
+    uk("uk-midsummer",   "Midsummer / Summer Solstice", `${y}-06-21`, "Observance",  "Global",   "Environmental",
+       "The longest day of the year.", "UK", "Stonehenge is the most famous solstice site in the world.", "Stonehenge gatherings, outdoor festivals, morris dancing.", false),
+    uk("uk-wimbledon",   "Wimbledon Championships",     wimbledonStart,"Social Day",  "National", "Fun",
+       "The world's oldest and most prestigious tennis tournament.", "All England Club, Wimbledon", "First played in 1877; the only Grand Slam on grass.", "Watching matches, strawberries and cream, queuing for tickets.", false, ["London"]),
+    uk("uk-glastonbury", "Glastonbury Festival",        `${y}-06-25`, "Festival Day", "Regional", "Cultural",
+       "The world's largest greenfield music and performing arts festival.", "Worthy Farm, Somerset", "Started by Michael Eavis in 1970; now 200,000+ attendees.", "Live music, arts, camping, mud, Pyramid Stage headline acts.", false, ["Somerset"]),
+    uk("uk-dragonboat",  "Dragon Boat Festival",        `${y}-06-10`, "Festival Day", "Regional", "Cultural",
+       "Traditional Chinese festival celebrated by UK's Chinese community.", "UK cities", "Marks Qu Yuan's sacrifice; features dragon boat racing.", "Dragon boat races, zongzi, community events.", false, ["London"]),
+
+    // ── July ──
+    uk("uk-theopen",     "The Open Championship",       `${y}-07-14`, "Social Day",  "National", "Fun",
+       "The oldest of golf's four major championships.", "Varies (Royal Troon, St Andrews, etc.)", "First played in 1860 at Prestwick, Scotland.", "Watching golf, attending the course, highlights on TV.", false),
+    uk("uk-britgp",      "British Grand Prix",          `${y}-07-06`, "Social Day",  "National", "Fun",
+       "Formula 1 race at Silverstone — one of the most iconic races on the calendar.", "Silverstone, Northamptonshire", "British GP has been on the F1 calendar since 1950.", "Watching the race, attending Silverstone, fan zones.", false, ["Northamptonshire"]),
+    uk("uk-nhsbirthday", "NHS Birthday",                `${y}-07-05`, "Observance",  "National", "Health",
+       "Marks the founding of the National Health Service on July 5, 1948.", "UK", "The NHS is the world's largest publicly funded health service.", "Celebrating NHS staff, blue light tribute events.", false),
+    uk("uk-goodwood",    "Goodwood Festival of Speed",  `${y}-07-10`, "Festival Day", "Regional", "Fun",
+       "The world's greatest motorsport garden party.", "Goodwood House, West Sussex", "Started in 1993; showcases historic and modern racing cars.", "Watching cars climb the hill, celebrity spotters, displays.", false, ["West Sussex"]),
+    uk("uk-cowes",       "Cowes Week",                  `${y}-08-02`, "Festival Day", "Regional", "Fun",
+       "The world's oldest and largest sailing regatta.", "Cowes, Isle of Wight", "First held in 1826; attracts 8,000+ sailors.", "Yacht racing, sailing events, island atmosphere.", false, ["Isle of Wight"]),
+
+    // ── August ──
+    uk("uk-augustbh-ew", "Summer Bank Holiday",         augustBH,     "Observance",  "Regional", "Cultural",
+       "Last Monday of August bank holiday in England and Wales.", "England & Wales", "A public holiday marking end of summer.", "Day trips, outdoor events, last summer activities.", true, ["England","Wales"]),
+    uk("uk-augustbh-scot","Summer Bank Holiday (Scotland)", augustBHScot,"Observance","Regional","Cultural",
+       "First Monday of August bank holiday in Scotland.", "Scotland", "Scotland's summer bank holiday falls earlier than England/Wales.", "Outdoor activities, family events.", true, ["Scotland"]),
+    uk("uk-edinfringe",  "Edinburgh Festival Fringe",   `${y}-08-01`, "Festival Day", "Regional", "Cultural",
+       "The world's largest arts festival, held annually in Edinburgh.", "Edinburgh, Scotland", "Started in 1947 as an alternative to the Edinburgh International Festival.", "Comedy, theatre, street performers, late-night shows.", false, ["Scotland"]),
+    uk("uk-edinintl",    "Edinburgh International Festival", `${y}-08-01`,"Festival Day","Regional","Cultural",
+       "Premier international performing arts festival.", "Edinburgh, Scotland", "Founded in 1947 alongside the Fringe.", "Opera, dance, theatre, classical music.", false, ["Scotland"]),
+    uk("uk-edinmilitattoo","Royal Edinburgh Military Tattoo", `${y}-08-02`,"Festival Day","Regional","Cultural",
+       "Military music and performance show at Edinburgh Castle.", "Edinburgh Castle, Scotland", "Held since 1950; watched by 220,000 people annually.", "Military performances, pipes and drums, fireworks.", false, ["Scotland"]),
+    uk("uk-notting-hill","Notting Hill Carnival",       nthDay(y,8,0,-1),"Festival Day","Regional","Cultural",
+       "Europe's largest street festival celebrating Caribbean culture.", "Notting Hill, London", "Started in 1966 by the Caribbean community of West London.", "Steel bands, colourful floats, jerk chicken, dancing.", false, ["London"]),
+    uk("uk-stoptober",   "Stoptober",                   `${y}-10-01`, "Observance",  "National", "Health",
+       "NHS campaign encouraging smokers to quit for October.", "UK", "Started by Public Health England in 2012.", "Stop smoking apps, support groups, NHS helpline.", false),
+    uk("uk-uphellyaa",   "Up Helly Aa",                 nthDay(y,1,2,5),"Festival Day","Regional","Cultural",
+       "Europe's largest fire festival, celebrating Shetland's Norse heritage.", "Lerwick, Shetland", "Started in the 1880s as a torchlight procession.", "Burning a Viking longship, squads, guizers, festivities.", false, ["Shetland"]),
+
+    // ── September ──
+    uk("uk-autumnequinox","Autumn Equinox",             `${y}-09-22`, "Observance",  "Global",   "Environmental",
+       "First day of astronomical autumn.", "UK", "Equal hours of day and night.", "Harvest festivals, seasonal foods, nature walks.", false),
+    uk("uk-harvestfest", "Harvest Festival",            nthDay(y,9,0,3),"Festival Day","National","Religious",
+       "Traditional church and school celebration of the harvest.", "UK", "Ancient tradition of giving thanks for the harvest.", "Church services, food bank donations, harvest suppers.", false),
+    uk("uk-blackhistory-uk","Black History Month",      `${y}-10-01`, "Observance",  "National", "Cultural",
+       "UK celebrates Black history in October (unlike US which is February).", "UK", "Established in the UK in 1987 by Akyaaba Addai Sebo.", "Events, exhibitions, educational programs, media coverage.", false),
+    uk("uk-rohnday",     "Roald Dahl Day",              `${y}-09-13`, "Observance",  "National", "Cultural",
+       "Celebrates the birthday of beloved British author Roald Dahl.", "UK", "Roald Dahl was born September 13, 1916.", "Reading his books, school events, Wonka-themed activities.", false),
+
+    // ── October ──
+    uk("uk-halloween-uk","Halloween",                   `${y}-10-31`, "Festival Day", "National", "Fun",
+       "Spooky celebration with costumes, trick-or-treating, and pumpkins.", "UK", "Halloween has grown hugely in UK popularity since the 1990s.", "Trick-or-treating, pumpkin carving, fancy dress parties.", false),
+    uk("uk-samhain",     "Samhain",                     `${y}-10-31`, "Festival Day", "Regional", "Cultural",
+       "Ancient Celtic festival marking the end of the harvest season.", "Ireland, Scotland, Wales", "The original festival that became Halloween; a time when spirits walk.", "Bonfires, lanterns, traditional stories, Celtic ceremonies.", false, ["Scotland","Wales","Northern Ireland"]),
+    uk("uk-dstend",      "British Summer Time Ends",    dstEnd,       "Observance",  "National", "Cultural",
+       "Clocks go back one hour — end of British Summer Time.", "UK", "UK returns to GMT in late October.", "Set clocks back; darker evenings begin.", false),
+    uk("uk-trafalgar",   "Trafalgar Day",               `${y}-10-21`, "Observance",  "National", "Political",
+       "Commemorates the Battle of Trafalgar (1805) and Lord Nelson's victory.", "Portsmouth & London", "Lord Nelson defeated the Franco-Spanish fleet on October 21, 1805.", "Naval ceremonies, wreath laying at Trafalgar Square.", false),
+    uk("uk-diwali-uk",   "Diwali",                      `${y}-10-20`, "Festival Day", "National", "Cultural",
+       "Festival of Lights celebrated by the UK's large South Asian community.", "Leicester, London, Birmingham", "Major celebration for the UK's Hindu, Sikh, and Jain communities.", "Fireworks, lights, community events, especially in Leicester.", false, ["Leicester","London","Birmingham"]),
+
+    // ── November ──
+    uk("uk-bonfire",     "Bonfire Night (Guy Fawkes Night)", `${y}-11-05`,"Festival Day","National","Cultural",
+       "Annual celebration with fireworks and bonfires marking the Gunpowder Plot's failure.", "UK", "Guy Fawkes tried to blow up Parliament on November 5, 1605.", "Fireworks, bonfires, burning Guy effigies, toffee apples.", false),
+    uk("uk-remembrance","Remembrance Day",              `${y}-11-11`, "Observance",  "National", "Political",
+       "Marks the armistice that ended WWI at the 11th hour of the 11th day of the 11th month.", "UK", "WWI ended November 11, 1918 — over 700,000 British lives were lost.", "Two minutes silence at 11:00, poppy wearing, Last Post.", false),
+    uk("uk-remembsun",  "Remembrance Sunday",           remembSun,    "Observance",  "National", "Political",
+       "The main national act of remembrance — the Sunday nearest November 11.", "Cenotaph, London", "Annual national service at the Cenotaph in Whitehall.", "Wreath laying at Cenotaph, national service, poppy wreaths.", false, ["London"]),
+    uk("uk-movember-uk","Movember",                    `${y}-11-01`, "Observance",  "National", "Health",
+       "Month raising awareness for men's health — prostate cancer, mental health.", "UK", "Men grow moustaches throughout November for charity.", "Growing moustaches, fundraising, health screenings.", false),
+    uk("uk-standrews",  "St Andrew's Day",              `${y}-11-30`, "Festival Day", "Regional", "Cultural",
+       "Scotland's national day, celebrating the patron saint of Scotland.", "Scotland", "St Andrew is patron saint of Scotland; his remains are at St Andrews cathedral.", "Whisky, haggis, ceilidh dancing, Scottish music.", false, ["Scotland"]),
+    uk("uk-childrenineed","Children in Need",           nthDay(y,11,5,2),"Observance","National","Social",
+       "BBC charity appeal raising money for disadvantaged children in the UK.", "UK", "Started in 1980; Pudsey Bear is the mascot.", "Fundraising events, BBC Telethon, spotty costumes.", false),
+    uk("uk-blackfriday-uk","Black Friday",              addDays(nthDay(y,11,4,4),1),"Social Day","National","Cultural",
+       "Major sales event adopted from the US — biggest shopping day of UK year.", "UK", "UK adopted Black Friday in 2010 via Amazon UK.", "Shopping, online deals, queues outside stores.", false),
+
+    // ── December ──
+    uk("uk-advent",     "Advent Sunday",                nthDay(y,12,0,1),"Observance","National","Religious",
+       "First Sunday of Advent — the beginning of the Christian Christmas season.", "UK", "Advent is the period of preparation before Christmas.", "Advent calendars, candles, church services.", false),
+    uk("uk-christmasmarkets","Christmas Markets",       `${y}-12-01`, "Festival Day", "National", "Cultural",
+       "Traditional Christmas markets open across UK cities throughout December.", "UK (Birmingham, Manchester, Edinburgh, London)", "German-inspired tradition; Birmingham's Frankfurt Christmas Market is Europe's largest outside Germany.", "Mulled wine, crafts, festive food, carousel rides.", false, ["Birmingham","Manchester","Edinburgh","London"]),
+    uk("uk-hanukkah-uk","Hanukkah",                    hanukkah,     "Festival Day", "National", "Religious",
+       "Jewish Festival of Lights celebrated by UK's Jewish community.", "UK", "Eight-night celebration of the miracle of oil in the Temple.", "Menorah lighting, latkes, dreidel, community events.", false),
+    uk("uk-wintersolstice","Winter Solstice",           `${y}-12-21`, "Observance",  "Global",   "Environmental",
+       "The shortest day of the year — ancient Celtic celebration of Yule.", "UK (Stonehenge)", "Stonehenge winter solstice sunrise is a major event.", "Stonehenge gathering, Yule logs, bonfires, seasonal celebrations.", false),
+    uk("uk-christmaseve","Christmas Eve",               `${y}-12-24`, "Festival Day", "National", "Religious",
+       "The evening before Christmas Day.", "UK", "Night of anticipation; carols, last preparations.", "Midnight Mass, carol services, family gathering, mince pies.", false),
+    uk("uk-christmas",  "Christmas Day",                `${y}-12-25`, "Festival Day", "National", "Religious",
+       "Celebration of the birth of Jesus Christ — the UK's most celebrated holiday.", "UK", "Christianity's most important celebration.", "Gift opening, Christmas dinner (turkey, roasties, crackers), Queen's Speech.", true),
+    uk("uk-boxingday",  "Boxing Day",                   `${y}-12-26`, "Festival Day", "National", "Cultural",
+       "The day after Christmas — a bank holiday with a long tradition of giving.", "UK", "Traditionally when servants received gifts from employers (a Christmas box).", "Football matches, shopping sales, visiting family.", true),
+    uk("uk-hogmanay",   "Hogmanay (Scottish New Year)", `${y}-12-31`, "Festival Day", "Regional", "Cultural",
+       "Scotland's legendary New Year celebration — bigger than Christmas in Scotland.", "Edinburgh, Glasgow & all of Scotland", "Scots celebrate New Year's Eve with unique traditions.", "Street parties, fireworks (Edinburgh), first-footing, Auld Lang Syne.", false, ["Scotland"]),
+    uk("uk-newyearseve","New Year's Eve",               `${y}-12-31`, "Festival Day", "National", "Cultural",
+       "End-of-year celebrations with fireworks at London's South Bank.", "UK", "The River Thames fireworks are watched by millions on TV.", "Countdown, fireworks, parties, Auld Lang Syne.", false),
+
+    // ── Religious dates for UK communities ──
+    uk("uk-eid-uk",     "Eid al-Fitr",                 `${y}-03-31`, "Festival Day", "National", "Religious",
+       "End of Ramadan — celebrated by the UK's 3.5 million Muslim community.", "UK", "Marks the end of the holy month of fasting.", "Prayers, feasting, gifts, community gatherings.", false),
+    uk("uk-diwali-uk2", "Diwali (Deepavali)",          `${y}-10-20`, "Festival Day", "National", "Religious",
+       "Festival of Lights celebrated by UK Hindu, Sikh and Jain communities.", "Leicester, London, Birmingham", "Major South Asian festival of light over darkness.", "Fireworks (especially Leicester), lanterns, community events.", false),
+    uk("uk-guru-nanak-uk","Guru Nanak Jayanti",        `${y}-11-15`, "Festival Day", "National", "Religious",
+       "Birthday of Guru Nanak Dev, founder of Sikhism — celebrated by UK Sikhs.", "UK", "Major celebration for the UK's 430,000 Sikh population.", "Processions (nagar kirtan), langar, gurdwara services.", false),
+    uk("uk-vaisakhi-uk","Vaisakhi",                    `${y}-04-14`, "Festival Day", "National", "Religious",
+       "Sikh harvest festival and commemoration of the Khalsa Panth.", "UK (Southall, Birmingham)", "Major Sikh festival marking the founding of the Khalsa in 1699.", "Nagar kirtan processions, bhangra, langar.", false, ["London","Birmingham"]),
+
+    // ── Six Nations Rugby ──
+    uk("uk-sixnations",  "Six Nations Championship",   `${y}-02-01`, "Social Day",  "National", "Fun",
+       "Annual rugby union tournament between England, Scotland, Wales, Ireland, France and Italy.", "UK & Ireland", "Started in 1882; one of the world's most watched rugby events.", "Watching matches, pub screenings, supporting home nations.", false),
+    uk("uk-bafta",       "BAFTA Awards",               `${y}-02-16`, "Social Day",  "National", "Cultural",
+       "British Academy Film Awards — the UK's most prestigious film awards.", "Royal Festival Hall, London", "Awarded by the British Academy of Film and Television Arts since 1955.", "Watching red carpet, award ceremony on BBC.", false, ["London"]),
+    uk("uk-eisteddfod",  "Royal National Eisteddfod",  `${y}-08-04`, "Festival Day", "Regional", "Cultural",
+       "The largest music and poetry festival in Wales, conducted entirely in Welsh.", "Wales (location varies)", "Dates back to 1176; promotes Welsh language and culture.", "Poetry, music, literature competitions, cultural events.", false, ["Wales"]),
+    uk("uk-cheltenham",  "Cheltenham Festival",        `${y}-03-10`, "Social Day",  "Regional", "Fun",
+       "The biggest jump racing festival in the National Hunt season.", "Cheltenham Racecourse, Gloucestershire", "Four-day festival featuring the Cheltenham Gold Cup.", "Horse racing, betting, fashion, atmosphere.", false, ["Gloucestershire"]),
+    uk("uk-proms",       "BBC Proms",                  `${y}-07-18`, "Festival Day", "National", "Cultural",
+       "Eight weeks of world-class classical music concerts at the Royal Albert Hall.", "Royal Albert Hall, London", "Running since 1895; the Last Night of the Proms is iconic.", "Classical concerts, Last Night of the Proms, streaming on BBC.", false, ["London"]),
+  ];
+}
+
 export const SEED_FESTIVALS: Festival[] = [
   ...generateYear(2026),
   ...generateYear(2027),
   ...generateYear(2028),
   ...generateYear(2029),
   ...generateYear(2030),
+  ...generateUSYear(2026),
+  ...generateUSYear(2027),
+  ...generateUSYear(2028),
+  ...generateUSYear(2029),
+  ...generateUSYear(2030),
+  ...generateUKYear(2026),
+  ...generateUKYear(2027),
+  ...generateUKYear(2028),
+  ...generateUKYear(2029),
+  ...generateUKYear(2030),
 ];

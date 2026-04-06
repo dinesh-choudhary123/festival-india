@@ -5,6 +5,7 @@ import {
   FESTIVAL_SCOPES,
   FESTIVAL_CATEGORIES,
   MONTHS,
+  COUNTRIES,
   getYearRange,
 } from "@/lib/constants";
 import type { FestivalFilters } from "@/lib/types";
@@ -19,6 +20,19 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
 
   return (
     <div className="flex flex-wrap items-center gap-3 px-6 py-4 bg-white border-b border-gray-100">
+      {/* Country */}
+      <select
+        className="filter-select"
+        value={filters.country}
+        onChange={(e) => onFilterChange({ country: e.target.value })}
+      >
+        {COUNTRIES.map((c) => (
+          <option key={c.code} value={c.code}>
+            {c.flag} {c.label}
+          </option>
+        ))}
+      </select>
+
       {/* Year */}
       <select
         className="filter-select"

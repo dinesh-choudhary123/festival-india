@@ -13,6 +13,7 @@ const DEFAULT_FILTERS: FestivalFilters = {
   type: "All Types",
   scope: "All Scopes",
   search: "",
+  country: "All Countries",
 };
 
 export function useFestivals() {
@@ -96,6 +97,9 @@ export function useFestivals() {
     if (filters.scope !== "All Scopes") {
       result = result.filter((f) => f.scope === filters.scope);
     }
+    if (filters.country !== "All Countries") {
+      result = result.filter((f) => f.country === filters.country);
+    }
     if (filters.search.trim()) {
       const q = filters.search.toLowerCase();
       result = result.filter(
@@ -117,10 +121,10 @@ export function useFestivals() {
     const today = new Date().toISOString().split("T")[0];
     const source = apiConnected && apiFestivals ? apiFestivals : SEED_FESTIVALS;
     return source
-      .filter((f) => f.date >= today)
+      .filter((f) => f.date >= today && (filters.country === "All Countries" || f.country === filters.country))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 10);
-  }, [apiConnected, apiFestivals]);
+  }, [apiConnected, apiFestivals, filters.country]);
 
   return {
     festivals: paginated,

@@ -36,6 +36,7 @@ export interface FestivalFilters {
   type: string;
   scope: string;
   search: string;
+  country: string;
 }
 
 export interface BenchmarkEntry {

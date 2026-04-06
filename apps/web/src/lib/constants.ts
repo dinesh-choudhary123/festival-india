@@ -1,3 +1,10 @@
+export const COUNTRIES = [
+  { code: "All Countries", label: "All Countries", flag: "\uD83C\uDF0D" },
+  { code: "IN", label: "India", flag: "\uD83C\uDDEE\uD83C\uDDF3" },
+  { code: "US", label: "USA", flag: "\uD83C\uDDFA\uD83C\uDDF8" },
+  { code: "GB", label: "UK", flag: "\uD83C\uDDEC\uD83C\uDDE7" },
+] as const;
+
 export const FESTIVAL_TYPES = ["Festival Day", "Social Day", "Observance"] as const;
 export const FESTIVAL_SCOPES = ["Global", "National", "Regional"] as const;
 export const FESTIVAL_CATEGORIES = [
