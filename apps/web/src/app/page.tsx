@@ -8,7 +8,6 @@ import { MyCalendarTable } from "@/components/festivals/MyCalendarTable";
 import { FestivalDetailModal } from "@/components/festivals/FestivalDetailModal";
 import { PostCreator } from "@/components/festivals/PostCreator";
 import { Pagination } from "@/components/festivals/Pagination";
-import { UpcomingCountdown } from "@/components/festivals/UpcomingCountdown";
 import { useFestivals } from "@/hooks/useFestivals";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
 import type { Festival, CalendarEntry } from "@/lib/types";
@@ -48,7 +47,6 @@ export default function HomePage() {
     filters,
     updateFilters,
     setPage,
-    upcoming,
   } = useFestivals();
 
   const [activeTab, setActiveTab] = useState<Tab>("available");
@@ -229,49 +227,6 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Sidebar — upcoming countdown */}
-          <div className="hidden xl:block w-80 shrink-0">
-            <UpcomingCountdown
-              festivals={upcoming}
-              onFestivalClick={setSelectedFestival}
-            />
-            {/* Quick stats */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                {filters.year} Overview
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="text-center p-3 bg-orange-50 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">{total}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">Total Days</div>
-                </div>
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{calendarCount}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">In Calendar</div>
-                </div>
-              </div>
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Festival Days</span>
-                  <span className="font-medium text-gray-900">
-                    {festivals.filter((f) => f.type === "Festival Day").length}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Social Days</span>
-                  <span className="font-medium text-gray-900">
-                    {festivals.filter((f) => f.type === "Social Day").length}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">Observances</span>
-                  <span className="font-medium text-gray-900">
-                    {festivals.filter((f) => f.type === "Observance").length}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 

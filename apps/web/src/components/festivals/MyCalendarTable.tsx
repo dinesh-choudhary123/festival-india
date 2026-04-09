@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { Info, Calendar, MoreVertical, Image, Trash2, FileText, BarChart3 } from "lucide-react";
+import { Info, Calendar, MoreVertical, Image, Trash2, FileText, BarChart3, Link as LinkIcon } from "lucide-react";
 import { formatDate, CURRENCIES, getCurrencySymbol } from "@/lib/constants";
 import { TypeBadge, ScopeBadge } from "./FestivalBadge";
 import { BenchmarkModal } from "./BenchmarkModal";
@@ -178,7 +178,7 @@ export function MyCalendarTable({
                 Date
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Day
+                Month
               </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 Event Name
@@ -207,7 +207,9 @@ export function MyCalendarTable({
             {filtered.map((festival) => {
               const entry = calendarData[festival.id];
               const benchmarks = entry?.benchmarks || [];
-              const totalLikes = benchmarks.reduce((s, b) => s + (b.metrics?.likes || 0), 0);
+              const totalViews = benchmarks.reduce((s, b) => s + (b.metrics?.views || 0), 0);
+              const maxViewEntry = benchmarks.reduce<BenchmarkEntry | null>((m, b) =>
+                (b.metrics?.views || 0) > (m?.metrics?.views || 0) ? b : m, null);
               return (
                 <tr
                   key={festival.id}
@@ -223,32 +225,32 @@ export function MyCalendarTable({
                     />
                   </td>
 
-                  {/* Date */}
+                  {/* Date + Day merged */}
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-2">
-                      <Calendar size={14} className="text-gray-400" />
-                      <div className="text-sm text-gray-900 whitespace-nowrap">
-                        {(() => {
-                          const d = new Date(festival.date + "T00:00:00");
-                          return (
-                            <div className="leading-tight">
-                              <span className="block font-medium">
-                                {d.toLocaleDateString("en-IN", { month: "short" })}{" "}
-                                {d.getDate()}
-                              </span>
-                              <span className="block text-xs text-gray-400">
-                                {d.getFullYear()}
-                              </span>
-                            </div>
-                          );
-                        })()}
-                      </div>
+                      <Calendar size={14} className="text-gray-400 shrink-0" />
+                      {(() => {
+                        const d = new Date(festival.date + "T00:00:00");
+                        return (
+                          <div className="leading-tight">
+                            <span className="block text-sm font-semibold text-gray-900">
+                              {d.getDate()}
+                            </span>
+                            <span className="block text-xs text-gray-400">
+                              {d.toLocaleDateString("en-IN", { weekday: "short" })}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </td>
 
-                  {/* Day */}
-                  <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">
-                    {festival.day}
+                  {/* Month */}
+                  <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">
+                    {(() => {
+                      const d = new Date(festival.date + "T00:00:00");
+                      return d.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
+                    })()}
                   </td>
 
                   {/* Event Name with type badge + info icon */}
@@ -294,11 +296,7 @@ export function MyCalendarTable({
                       <option value="">Select...</option>
                       <option value="Say hi!">Say hi!</option>
                       <option value="Small Talk">Small Talk</option>
-                      <option value="Content Team">Content Team</option>
-                      <option value="Design Team">Design Team</option>
-                      <option value="Marketing">Marketing</option>
-                      <option value="Social Media">Social Media</option>
-                      <option value="Brand Team">Brand Team</option>
+                      <option value="Conversation">Conversation</option>
                     </select>
                   </td>
 
@@ -343,18 +341,34 @@ export function MyCalendarTable({
                   {/* Benchmarking */}
                   <td className="px-4 py-3.5">
                     {benchmarks.length > 0 ? (
-                      <button
-                        onClick={() => setBenchmarkFestivalId(festival.id)}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1"
-                      >
-                        <BarChart3 size={13} />
-                        <span>{benchmarks.length} link{benchmarks.length > 1 ? "s" : ""}</span>
-                        {totalLikes > 0 && (
-                          <span className="text-xs text-gray-500 ml-1">
-                            {formatMetricShort(totalLikes)} likes
-                          </span>
+                      <div className="flex flex-col gap-0.5">
+                        <button
+                          onClick={() => setBenchmarkFestivalId(festival.id)}
+                          className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1"
+                        >
+                          <BarChart3 size={13} />
+                          <span>{benchmarks.length} link{benchmarks.length > 1 ? "s" : ""}</span>
+                          {totalViews > 0 && (
+                            <span className="text-xs text-gray-500 ml-1">
+                              · {formatMetricShort(totalViews)} views
+                            </span>
+                          )}
+                        </button>
+                        {maxViewEntry && (maxViewEntry.metrics?.views || 0) > 0 && (
+                          <div className="flex items-center gap-1 text-xs text-gray-400">
+                            <span>max: {formatMetricShort(maxViewEntry.metrics?.views)}</span>
+                            <a
+                              href={maxViewEntry.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-600"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <LinkIcon size={11} />
+                            </a>
+                          </div>
                         )}
-                      </button>
+                      </div>
                     ) : (
                       <button
                         onClick={() => setBenchmarkFestivalId(festival.id)}
@@ -400,13 +414,6 @@ export function MyCalendarTable({
               >
                 <FileText size={12} />
                 Make Post
-              </button>
-              <button
-                onClick={() => { onViewDetails(menuFestival); setOpenMenuId(null); setMenuPos(null); }}
-                className="flex items-center gap-1.5 w-full px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
-              >
-                <Info size={12} />
-                View Details
               </button>
               <button
                 onClick={() => { onRemoveFromCalendar(menuFestival.id); setOpenMenuId(null); setMenuPos(null); }}

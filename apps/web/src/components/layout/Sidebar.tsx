@@ -59,8 +59,18 @@ export function Sidebar() {
     <aside
       className={`${
         collapsed ? "w-16" : "w-[260px]"
-      } bg-sidebar-bg text-sidebar-text flex flex-col transition-all duration-300 shrink-0`}
+      } bg-sidebar-bg text-sidebar-text flex flex-col transition-all duration-300 shrink-0 relative overflow-visible`}
     >
+      {/* Floating re-open tab — only visible when collapsed */}
+      {collapsed && (
+        <button
+          onClick={() => setCollapsed(false)}
+          title="Expand sidebar"
+          className="absolute right-[-14px] top-1/2 -translate-y-1/2 w-5 h-10 bg-white border border-gray-200 rounded-r-md shadow-md flex items-center justify-center z-50 hover:bg-gray-50 transition-colors"
+        >
+          <ChevronRight size={12} className="text-gray-500" />
+        </button>
+      )}
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-white/10">
         <div className="w-9 h-9 rounded-full bg-brand-orange flex items-center justify-center shrink-0">

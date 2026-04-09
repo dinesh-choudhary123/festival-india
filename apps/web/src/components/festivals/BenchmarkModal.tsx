@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Link2, Plus, Trash2, ExternalLink, Instagram, Youtube } from "lucide-react";
+import { X, Link2, Plus, Trash2, ExternalLink, Pencil } from "lucide-react";
 import type { BenchmarkEntry } from "@/lib/types";
 
 interface BenchmarkModalProps {
@@ -145,6 +145,41 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
     setEntries(entries.filter((_, i) => i !== idx));
   }
 
+  function handleEdit(idx: number) {
+    const entry = entries[idx];
+    setUrl(entry.url);
+    setPostType(entry.type || "post");
+    setBrandName(entry.brand_name || "");
+    setLikes(entry.metrics.likes !== undefined ? String(entry.metrics.likes) : "");
+    setComments(entry.metrics.comments !== undefined ? String(entry.metrics.comments) : "");
+    setShares(entry.metrics.shares !== undefined ? String(entry.metrics.shares) : "");
+    setViews(entry.metrics.views !== undefined ? String(entry.metrics.views) : "");
+    setFetchError("");
+    setEntries(entries.filter((_, i) => i !== idx));
+  }
+
+  function buildCurrentEntry(): BenchmarkEntry {
+    return {
+      url: url.trim(),
+      platform: detectedPlatform || "other",
+      type: postType,
+      brand_name: brandName.trim(),
+      metrics: {
+        likes: likes ? parseInt(likes) : undefined,
+        comments: comments ? parseInt(comments) : undefined,
+        shares: shares ? parseInt(shares) : undefined,
+        views: views ? parseInt(views) : undefined,
+      },
+      added_at: new Date().toISOString(),
+    };
+  }
+
+  function handleSave() {
+    const final = url.trim() ? [...entries, buildCurrentEntry()] : entries;
+    onSave(final);
+    onClose();
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
@@ -198,9 +233,14 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
                       {entry.metrics.views !== undefined && <span>{formatMetric(entry.metrics.views)} views</span>}
                     </div>
                   </div>
-                  <button onClick={() => handleRemove(idx)} className="p-1 text-red-400 hover:text-red-600">
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="flex flex-col gap-1">
+                    <button onClick={() => handleEdit(idx)} className="p-1 text-blue-400 hover:text-blue-600" title="Edit">
+                      <Pencil size={14} />
+                    </button>
+                    <button onClick={() => handleRemove(idx)} className="p-1 text-red-400 hover:text-red-600" title="Remove">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -249,6 +289,17 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
                   className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
+              {url.trim() && (
+                <a
+                  href={url.trim()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center px-2.5 text-blue-500 hover:text-blue-700 border border-gray-300 rounded-lg hover:bg-blue-50 transition-colors"
+                  title="Open link"
+                >
+                  <ExternalLink size={15} />
+                </a>
+              )}
               <button
                 onClick={handleFetchMetrics}
                 disabled={!url.trim() || fetching}
@@ -350,7 +401,7 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
             Cancel
           </button>
           <button
-            onClick={() => { onSave(entries); onClose(); }}
+            onClick={handleSave}
             className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
           >
             Save Benchmarks

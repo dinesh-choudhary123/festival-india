@@ -3531,7 +3531,17 @@ function generateUKYear(y: number): Festival[] {
   ];
 }
 
-export const SEED_FESTIVALS: Festival[] = [
+function fixScopes(festivals: Festival[]): Festival[] {
+  return festivals.map((f) => ({
+    ...f,
+    scope:
+      f.name.toLowerCase().includes("national") && f.scope === "Global"
+        ? "National"
+        : f.scope,
+  }));
+}
+
+export const SEED_FESTIVALS: Festival[] = fixScopes([
   ...generateYear(2026),
   ...generateYear(2027),
   ...generateYear(2028),
@@ -3547,4 +3557,4 @@ export const SEED_FESTIVALS: Festival[] = [
   ...generateUKYear(2028),
   ...generateUKYear(2029),
   ...generateUKYear(2030),
-];
+]);
