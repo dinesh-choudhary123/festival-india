@@ -1,7 +1,7 @@
 "use client";
 
-import { Info, CalendarPlus, Pencil } from "lucide-react";
-import { formatDate } from "@/lib/constants";
+import { Info, CalendarPlus, Pencil, Clock, PartyPopper } from "lucide-react";
+import { formatDate, getDaysUntil } from "@/lib/constants";
 import { TypeBadge, ScopeBadge } from "./FestivalBadge";
 import type { Festival } from "@/lib/types";
 
@@ -63,8 +63,25 @@ export function FestivalTable({
               className="festival-row hover:bg-orange-50/30 cursor-pointer"
               onClick={() => onViewDetails(festival)}
             >
-              <td className="px-6 py-3.5 text-sm text-gray-900 whitespace-nowrap">
-                {formatDate(festival.date)}
+              <td className="px-6 py-3.5 whitespace-nowrap">
+                <div className="text-sm text-gray-900">{formatDate(festival.date)}</div>
+                {(() => {
+                  const days = getDaysUntil(festival.date);
+                  if (days < 0) return null;
+                  return (
+                    <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full mt-0.5 ${
+                      days === 0
+                        ? "bg-green-100 text-green-700"
+                        : days <= 7
+                        ? "bg-red-50 text-red-600"
+                        : days <= 30
+                        ? "bg-orange-50 text-brand-orange"
+                        : "bg-gray-100 text-gray-500"
+                    }`}>
+                      {days === 0 ? <><PartyPopper size={9} /> Today!</> : <><Clock size={9} /> {days}d</>}
+                    </span>
+                  );
+                })()}
               </td>
               <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">
                 {festival.day}
