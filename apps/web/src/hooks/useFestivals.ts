@@ -85,6 +85,14 @@ export function useFestivals() {
 
     let result = [...source];
 
+    // In "All Countries" view (India-centric default), hide National-scope festivals
+    // from other countries (US/UK). They appear only when their country is explicitly selected.
+    if (filters.country === "All Countries") {
+      result = result.filter(
+        (f) => f.scope !== "National" || f.country === "IN"
+      );
+    }
+
     if (filters.month > 0) {
       result = result.filter((f) => parseInt(f.date.split("-")[1], 10) === filters.month);
     }

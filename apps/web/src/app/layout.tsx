@@ -7,7 +7,7 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Festival India — Social Media Calendar",
+  title: "Festival Calendar — Social Media Calendar",
   description:
     "Complete Indian festivals & events calendar with 240+ days across all categories. Plan your social media content around festivals, observances, and special days.",
   keywords: [

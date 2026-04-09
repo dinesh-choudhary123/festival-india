@@ -22,9 +22,7 @@ function detectPlatform(url: string): BenchmarkEntry["platform"] {
 
 function formatMetric(n?: number): string {
   if (n === undefined || n === null) return "-";
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
-  return String(n);
+  return n.toLocaleString("en-US");
 }
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -100,13 +98,14 @@ export function BenchmarkModal({ festivalName, benchmarks, onSave, onClose }: Be
 
       if (fields.length > 0) {
         const missing = ["views", "likes", "comments", "shares"].filter((f) => !fields.includes(f));
-        setFetchError(
-          `✅ Auto-filled: ${fields.join(", ")}.${missing.length ? ` Please enter ${missing.join(", ")} manually.` : ""}`
-        );
+        const missingNote = missing.length
+          ? ` ${missing.join(" & ")} could not be fetched — platforms like YouTube load these via JavaScript (not accessible server-side); Instagram & Facebook block automated access. Please enter them manually.`
+          : "";
+        setFetchError(`✅ Auto-filled: ${fields.join(", ")}.${missingNote}`);
       } else if (data.note) {
         setFetchError("ℹ️ " + data.note);
       } else {
-        setFetchError("ℹ️ Could not auto-fetch metrics for this platform. Please enter all values manually.");
+        setFetchError("ℹ️ Could not auto-fetch metrics. Comments & shares load via JavaScript on most platforms and cannot be scraped server-side. Please enter all values manually.");
       }
     } catch {
       setFetchError("⚠️ Network error. Please enter metrics manually.");

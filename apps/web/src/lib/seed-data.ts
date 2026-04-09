@@ -3532,13 +3532,20 @@ function generateUKYear(y: number): Festival[] {
 }
 
 function fixScopes(festivals: Festival[]): Festival[] {
-  return festivals.map((f) => ({
-    ...f,
-    scope:
-      f.name.toLowerCase().includes("national") && f.scope === "Global"
-        ? "National"
-        : f.scope,
-  }));
+  const countryNames: Record<string, string> = {
+    IN: "India", US: "United States", UK: "United Kingdom",
+  };
+  return festivals.map((f) => {
+    const isNationalByName = f.name.toLowerCase().includes("national");
+    const scopeFix = isNationalByName && f.scope === "Global" ? "National" : f.scope;
+    const whereLower = f.where_celebrated?.toLowerCase() ?? "";
+    const whereFix =
+      scopeFix === "National" &&
+      (whereLower === "worldwide" || whereLower === "global" || whereLower === "worldwide (observed in india)")
+        ? (countryNames[f.country] || f.country)
+        : f.where_celebrated;
+    return { ...f, scope: scopeFix, where_celebrated: whereFix };
+  });
 }
 
 export const SEED_FESTIVALS: Festival[] = fixScopes([

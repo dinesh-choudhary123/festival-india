@@ -47,6 +47,7 @@ export default function HomePage() {
     filters,
     updateFilters,
     setPage,
+    upcoming,
   } = useFestivals();
 
   const [activeTab, setActiveTab] = useState<Tab>("available");
@@ -151,6 +152,7 @@ export default function HomePage() {
         onCreatePost={() => {
           if (festivals.length > 0) setPostFestival(festivals[0]);
         }}
+        upcoming={upcoming}
       />
 
       {/* Data source indicator */}

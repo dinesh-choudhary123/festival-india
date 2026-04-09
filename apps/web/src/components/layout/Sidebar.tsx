@@ -79,7 +79,7 @@ export function Sidebar() {
         {!collapsed && (
           <div className="min-w-0">
             <div className="font-semibold text-white text-sm truncate">
-              Festival India
+              Festival Calendar
             </div>
             <div className="text-xs text-sidebar-text truncate">
               Social Media Calendar
