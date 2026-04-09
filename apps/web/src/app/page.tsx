@@ -153,6 +153,7 @@ export default function HomePage() {
           if (festivals.length > 0) setPostFestival(festivals[0]);
         }}
         upcoming={upcoming}
+        onFestivalClick={setSelectedFestival}
       />
 
       {/* Data source indicator */}
